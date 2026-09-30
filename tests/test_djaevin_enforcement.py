@@ -1,11 +1,11 @@
 """Testes da INFRAESTRUTURA DE ENFORCEMENT — desativados, nao apagados.
 
 Este modulo testava o gate automatico e a abstention em runtime, que nao fazem
-parte do Jevin original (5 tools MCP opt-in, sem bloqueio). Fica em skip para
+parte do Djævin original (5 tools MCP opt-in, sem bloqueio). Fica em skip para
 preservar os testes e o registo do que existiu.
 
 Reativar: correr com POORJEV_ABSTAIN=on POORJEV_EXTRA_TOOLS=on e remover o
-pytestmark abaixo; e reativar os hooks (ver JEV-LOCAL.md).
+pytestmark abaixo; e reativar os hooks (ver DJAEVIN-LOCAL.md).
 """
 
 import json
@@ -14,7 +14,7 @@ import re
 import pytest
 
 pytestmark = pytest.mark.skip(
-    reason="infraestrutura de enforcement desativada; o Jevin voltou a ser opt-in (ver JEV-LOCAL.md)"
+    reason="infraestrutura de enforcement desativada; o Djævin voltou a ser opt-in (ver DJAEVIN-LOCAL.md)"
 )
 
 from poorjev import Client
@@ -232,7 +232,7 @@ def test_typed_prompt_allows_trailing_instructions_after_json():
     assert request["tool"] == "classify"
 
 
-def test_user_prompt_hook_calls_jev_and_injects_result():
+def test_user_prompt_hook_calls_djaevin_and_injects_result():
     calls = []
 
     def call_tool(name, arguments):
@@ -248,7 +248,7 @@ def test_user_prompt_hook_calls_jev_and_injects_result():
 
     assert calls == [("classify", {"text": "refund request", "options": ["billing", "account"]})]
     context = result["hookSpecificOutput"]["additionalContext"]
-    assert "AUTOMATIC JEV DECISION" in context
+    assert "AUTOMATIC DJAEVIN DECISION" in context
     assert '"value": "billing"' in context
 
 
@@ -259,7 +259,7 @@ def test_batch_prompt_calls_decide_once_per_item():
         calls.append((name, arguments))
         return {"topic": {"value": "billing", "confidence": 0.9}}
 
-    prompt = 'JEV_BATCH {"items":[{"id":"a","state":"s1","questions":{"topic":{"type":"choice","options":["billing","tech"]}}},{"id":"b","state":"s2","questions":{"topic":{"type":"choice","options":["billing","tech"]}}}]}'
+    prompt = 'DJAEVIN_BATCH {"items":[{"id":"a","state":"s1","questions":{"topic":{"type":"choice","options":["billing","tech"]}}},{"id":"b","state":"s2","questions":{"topic":{"type":"choice","options":["billing","tech"]}}}]}'
     request = parse_decision_prompt(prompt)
     assert request["tool"] == "batch"
 
@@ -294,7 +294,7 @@ def test_dangerous_pretool_call_is_blocked_without_any_model_call(tmp_path):
 
     assert calls == []  # deterministic pattern: the model is never asked
     assert result["decision"] == "block"
-    assert "JEV_CONFIRM" in result["reason"]
+    assert "DJAEVIN_CONFIRM" in result["reason"]
     assert executed == []
 
 
@@ -353,7 +353,7 @@ def test_verdict_cache_avoids_repeating_the_model_call(tmp_path):
 
 def test_gate_timeout_blocks_with_confirmation(tmp_path):
     def timing_out(name, arguments):
-        raise TimeoutError("jev-local tools/call timed out")
+        raise TimeoutError("djaevin-local tools/call timed out")
 
     result = handle_pretool(
         {"tool_name": "exec", "session_id": "s",
@@ -364,7 +364,7 @@ def test_gate_timeout_blocks_with_confirmation(tmp_path):
 
     assert result["decision"] == "block"
     assert "budget" in result["reason"]
-    assert "JEV_CONFIRM" in result["reason"]
+    assert "DJAEVIN_CONFIRM" in result["reason"]
 
 
 def test_failed_gate_is_not_cached(tmp_path):
@@ -399,7 +399,7 @@ def test_lexical_money_and_delete_fallback_requires_confirmation(command, tmp_pa
     )
 
     assert result["decision"] == "block"
-    assert "JEV_CONFIRM" in result["reason"]
+    assert "DJAEVIN_CONFIRM" in result["reason"]
 
 
 @pytest.mark.parametrize("tool_input", [
@@ -428,10 +428,10 @@ def test_gate_block_requires_exact_one_time_confirmation(tmp_path):
         "tool_input": {"amount": 250000, "destination": "new account"},
     }
     blocked = handle_pretool(event, block_tool, store)
-    fingerprint = re.search(r"JEV_CONFIRM ([a-f0-9]{16})", blocked["reason"]).group(1)
+    fingerprint = re.search(r"DJAEVIN_CONFIRM ([a-f0-9]{16})", blocked["reason"]).group(1)
 
     confirmation = handle_user_prompt(
-        {"session_id": "session-1", "prompt": f"JEV_CONFIRM {fingerprint}"},
+        {"session_id": "session-1", "prompt": f"DJAEVIN_CONFIRM {fingerprint}"},
         block_tool,
         store,
     )
@@ -444,7 +444,7 @@ def test_gate_block_requires_exact_one_time_confirmation(tmp_path):
     assert blocked_again["decision"] == "block"
 
 
-def test_pretool_fails_closed_when_jev_is_unavailable(tmp_path):
+def test_pretool_fails_closed_when_djaevin_is_unavailable(tmp_path):
     def unavailable(name, arguments):
         raise RuntimeError("server down")
 

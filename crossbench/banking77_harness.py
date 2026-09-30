@@ -138,8 +138,8 @@ def run_von(items, labels):
     return records, latencies
 
 
-def run_jev(items, labels):
-    from jev_client import JevClient
+def run_djaevin(items, labels):
+    from djaevin_client import JevClient
 
     client = JevClient()
     criteria = {l: l for l in labels}
@@ -166,13 +166,13 @@ def run_jev(items, labels):
         )
         latencies.append(dt)
         if i % 20 == 0:
-            print(f"  jev {i}/{len(items)}")
+            print(f"  djaevin {i}/{len(items)}")
     return records, latencies
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--system", required=True, choices=["poorjev", "laya", "jev", "von"])
+    ap.add_argument("--system", required=True, choices=["poorjev", "laya", "djaevin", "von"])
     ap.add_argument("--limit", type=int, default=None)
     args = ap.parse_args()
 
@@ -181,6 +181,6 @@ if __name__ == "__main__":
         items = items[: args.limit]
     print(f"Running {args.system} on {len(items)} items, {len(labels)} classes")
 
-    fn = {"poorjev": run_poorjev, "laya": run_laya, "jev": run_jev, "von": run_von}[args.system]
+    fn = {"poorjev": run_poorjev, "laya": run_laya, "djaevin": run_djaevin, "von": run_von}[args.system]
     records, latencies = fn(items, labels)
     report(args.system, records, latencies, f"results/banking77_{args.system}_results.json")

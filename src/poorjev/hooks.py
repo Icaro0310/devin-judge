@@ -1,14 +1,14 @@
 """INFRAESTRUTURA DE ENFORCEMENT — DESATIVADA, NAO APAGADA.
 
 Este modulo era a politica do gate automatico (classificacao deterministica,
-cache de veredictos, aprovacoes one-shot, fail-closed). Nao faz parte do Jevin
-original: o Jevin e um MCP server opt-in com 5 tools que respondem e devolvem
+cache de veredictos, aprovacoes one-shot, fail-closed). Nao faz parte do Djævin
+original: o Djævin e um MCP server opt-in com 5 tools que respondem e devolvem
 confianca; nada bloqueia.
 
 Nada aqui e importado pelo mcp_server. Fica inerte enquanto os hooks estiverem
-desativados (ver .devin/JEV-ENFORCEMENT-DISABLED.md).
+desativados (ver .devin/DJAEVIN-ENFORCEMENT-DISABLED.md).
 
-Reativar: repor os hooks (hooks.v1.json.jev-disabled -> hooks.v1.json) e
+Reativar: repor os hooks (hooks.v1.json.djaevin-disabled -> hooks.v1.json) e
 relancar daemon + tarefa + VBS. O codigo esta intacto.
 """
 
@@ -30,10 +30,10 @@ VERDICT_TTL_SECONDS = 600
 # blocks on benign `memory retain` / `vault write` calls in real use. The budget
 # must cover a cold model, otherwise it flags healthy backends as broken.
 GATE_BUDGET_SECONDS = 12.0
-_CONFIRM_RE = re.compile(r"^\s*JEV_CONFIRM\s+([a-f0-9]{16})\s*$", re.IGNORECASE)
-_BATCH_PREFIX_RE = re.compile(r"^\s*JEV_BATCH\s+", re.IGNORECASE)
+_CONFIRM_RE = re.compile(r"^\s*DJAEVIN_CONFIRM\s+([a-f0-9]{16})\s*$", re.IGNORECASE)
+_BATCH_PREFIX_RE = re.compile(r"^\s*DJAEVIN_BATCH\s+", re.IGNORECASE)
 _REQUEST_PREFIX_RE = re.compile(
-    r"^\s*(?:JEV\s+)?(classify|classifique|classificar|categorize|judge|julgue|rate|score|avalie|decide|decida|gate)\s*:?[ \t]*",
+    r"^\s*(?:DJAEVIN\s+)?(classify|classifique|classificar|categorize|judge|julgue|rate|score|avalie|decide|decida|gate)\s*:?[ \t]*",
     re.IGNORECASE,
 )
 _TOOL_NAMES = {
@@ -173,7 +173,7 @@ def _nonempty_string(value, field: str) -> str:
 
 def _validate_request(tool: str, arguments: dict) -> dict:
     if not isinstance(arguments, dict):
-        raise ValueError("JEV request payload must be a JSON object")
+        raise ValueError("DJAEVIN request payload must be a JSON object")
     if tool == "classify":
         _nonempty_string(arguments.get("text"), "text")
         options = arguments.get("options")
@@ -215,15 +215,15 @@ def parse_decision_prompt(prompt: str) -> dict | None:
         payload, _ = decoder.raw_decode(prompt[match.end():].lstrip())
         items = payload.get("items") if isinstance(payload, dict) else None
         if not isinstance(items, list) or not items:
-            raise ValueError("JEV_BATCH requires a non-empty items array")
+            raise ValueError("DJAEVIN_BATCH requires a non-empty items array")
         clean_items = []
         for index, item in enumerate(items):
             if not isinstance(item, dict):
-                raise ValueError(f"JEV_BATCH item {index} must be an object")
+                raise ValueError(f"DJAEVIN_BATCH item {index} must be an object")
             state = _nonempty_string(item.get("state"), f"items[{index}].state")
             questions = item.get("questions")
             if not isinstance(questions, dict) or not questions:
-                raise ValueError(f"JEV_BATCH item {index} requires questions")
+                raise ValueError(f"DJAEVIN_BATCH item {index} requires questions")
             clean_items.append({
                 "id": str(item.get("id", index)),
                 "state": state,
@@ -255,13 +255,13 @@ def handle_user_prompt(event: dict, call_tool, approvals: ApprovalStore) -> dict
     if confirmation:
         granted = approvals.grant(session_id, confirmation.group(1))
         if not granted:
-            return _context("JEV_CONFIRM rejected: this session id or fingerprint is invalid.")
-        return _context("JEV explicit one-time approval recorded. Retry only the exact blocked tool call in this session.")
+            return _context("DJAEVIN_CONFIRM rejected: this session id or fingerprint is invalid.")
+        return _context("DJAEVIN explicit one-time approval recorded. Retry only the exact blocked tool call in this session.")
 
     try:
         request = parse_decision_prompt(prompt)
     except (ValueError, json.JSONDecodeError) as error:
-        return _context(f"JEV typed request rejected: {error}. No decision was run.")
+        return _context(f"DJAEVIN typed request rejected: {error}. No decision was run.")
     if request is None:
         return {}
 
@@ -276,12 +276,12 @@ def handle_user_prompt(event: dict, call_tool, approvals: ApprovalStore) -> dict
             result = call_tool(request["tool"], request["arguments"])
     except Exception as error:
         return _context(
-            f"JEV AUTOMATIC DECISION FAILED ({type(error).__name__}). Do not substitute an unverified decision; retry after jev-local is healthy."
+            f"DJAEVIN AUTOMATIC DECISION FAILED ({type(error).__name__}). Do not substitute an unverified decision; retry after djaevin-local is healthy."
         )
 
     return _context(
-        "JEV decision is mandatory for this structured request. Use the tool result verbatim; do not independently infer or override it. If a value is ABSTAIN, return ABSTAIN and do not guess.\n"
-        "AUTOMATIC JEV DECISION (invoked by UserPromptSubmit hook; this is the tool result):\n"
+        "DJAEVIN decision is mandatory for this structured request. Use the tool result verbatim; do not independently infer or override it. If a value is ABSTAIN, return ABSTAIN and do not guess.\n"
+        "AUTOMATIC DJAEVIN DECISION (invoked by UserPromptSubmit hook; this is the tool result):\n"
         + json.dumps(result, ensure_ascii=False, sort_keys=True)
     )
 
@@ -291,7 +291,7 @@ def _is_mutating_tool(tool_name: str) -> bool:
         return True
     if tool_name.startswith("mcp__"):
         parts = tool_name.split("__")
-        if len(parts) >= 3 and parts[1] == "jev-local":
+        if len(parts) >= 3 and parts[1] == "djaevin-local":
             return False
         suffix = parts[-1] if parts else ""
         return not bool(_READ_ONLY_MCP_SUFFIX.search(suffix))
@@ -386,7 +386,7 @@ def handle_pretool(event: dict, call_tool, approvals: ApprovalStore,
     }.get(verdict["source"], "Jev gate blocked this action.")
     return {
         "decision": "block",
-        "reason": f"{reason} No action was executed. To confirm this exact call once, submit: JEV_CONFIRM {fingerprint}",
+        "reason": f"{reason} No action was executed. To confirm this exact call once, submit: DJAEVIN_CONFIRM {fingerprint}",
     }
 
 

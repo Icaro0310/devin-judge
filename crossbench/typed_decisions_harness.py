@@ -1,6 +1,6 @@
 """
 Run ../evalset/tasks.jsonl (poorjev's own 55-item / 160-decision
-multi-primitive set: Choice + Score + Noul) through laya, von, or jev, scored
+multi-primitive set: Choice + Score + Noul) through laya, von, or djaevin, scored
 with poorjev's own metrics.py so every system is graded by identical code.
 
 For poorjev itself, just use its own CLI: `poorjev eval --set ../evalset/tasks.jsonl`
@@ -9,7 +9,7 @@ For poorjev itself, just use its own CLI: `poorjev eval --set ../evalset/tasks.j
 Run from inside crossbench/:
     python typed_decisions_harness.py --system laya
     python typed_decisions_harness.py --system von
-    python typed_decisions_harness.py --system jev
+    python typed_decisions_harness.py --system djaevin
 """
 import argparse
 import json
@@ -102,8 +102,8 @@ def run_von(tasks):
     return records, latencies
 
 
-def run_jev(tasks):
-    from jev_client import JevClient
+def run_djaevin(tasks):
+    from djaevin_client import JevClient
 
     client = JevClient()
     records, latencies = [], []
@@ -130,18 +130,18 @@ def run_jev(tasks):
                 predicted = ans["noul"] > 0.5
                 score_and_append(records, item["task"], key, spec, predicted, ans.get("confidence", max(ans["noul"], 1 - ans["noul"])), 2)
         if i % 10 == 0:
-            print(f"  jev {i}/{len(tasks)}")
+            print(f"  djaevin {i}/{len(tasks)}")
     return records, latencies
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--system", required=True, choices=["laya", "von", "jev"])
+    ap.add_argument("--system", required=True, choices=["laya", "von", "djaevin"])
     args = ap.parse_args()
 
     tasks = load_tasks()
     print(f"Running {args.system} on {len(tasks)} items from {DATA_PATH}")
-    fn = {"laya": run_laya, "von": run_von, "jev": run_jev}[args.system]
+    fn = {"laya": run_laya, "von": run_von, "djaevin": run_djaevin}[args.system]
     records, latencies = fn(tasks)
 
     overall = summarize(records)

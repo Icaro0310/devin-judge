@@ -62,12 +62,12 @@ cd crossbench
 python banking77_harness.py --system poorjev
 python banking77_harness.py --system laya
 python banking77_harness.py --system von
-TYPESAFE_API_KEY=sk-... python banking77_harness.py --system jev
+TYPESAFE_API_KEY=sk-... python banking77_harness.py --system djaevin
 
 # Multi-primitive set, non-poorjev systems
 python typed_decisions_harness.py --system laya
 python typed_decisions_harness.py --system von
-TYPESAFE_API_KEY=sk-... python typed_decisions_harness.py --system jev
+TYPESAFE_API_KEY=sk-... python typed_decisions_harness.py --system djaevin
 
 # Regenerate the chart in the main README from results/
 pip install matplotlib

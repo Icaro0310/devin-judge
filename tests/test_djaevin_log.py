@@ -1,69 +1,69 @@
-"""Unit tests for jev_log: SQLite decision log, disagreement promotion,
+"""Unit tests for djaevin_log: SQLite decision log, disagreement promotion,
 Jaccard few-shot retrieval, and the calibrate report. Stdlib only — no
 model, no server, tmp DB per test."""
 
 import pytest
 
-from poorjev import jev_log
+from poorjev import djaevin_log
 
 
 @pytest.fixture
 def db(tmp_path, monkeypatch):
-    monkeypatch.setenv("POORJEV_LOG_DB", str(tmp_path / "jev_log.db"))
-    return tmp_path / "jev_log.db"
+    monkeypatch.setenv("POORJEV_LOG_DB", str(tmp_path / "djaevin_log.db"))
+    return tmp_path / "djaevin_log.db"
 
 
 def test_log_decision_creates_db_and_returns_id(db):
-    decision_id = jev_log.log_decision("judge", "The sky is blue.", "yes", 0.9, False)
+    decision_id = djaevin_log.log_decision("judge", "The sky is blue.", "yes", 0.9, False)
     assert decision_id is not None
     assert db.exists()
-    decision_id_2 = jev_log.log_decision("rate", "Um texto.", "3", 0.5, True)
+    decision_id_2 = djaevin_log.log_decision("rate", "Um texto.", "3", 0.5, True)
     assert decision_id_2 > decision_id
 
 
 def test_mark_disagreement_promotes_to_examples(db):
-    decision_id = jev_log.log_decision(
+    decision_id = djaevin_log.log_decision(
         "classify", "Servico terrivel, nunca mais volto.", "bom", 0.44, True)
-    out = jev_log.mark_disagreement(decision_id, "mau")
+    out = djaevin_log.mark_disagreement(decision_id, "mau")
     assert out == {"ok": True, "promoted_to_examples": True}
-    examples = jev_log.get_few_shot("classify", "servico horrivel")
+    examples = djaevin_log.get_few_shot("classify", "servico horrivel")
     assert examples[0]["choice"] == "mau"
 
 
 def test_mark_disagreement_without_correct_choice(db):
-    decision_id = jev_log.log_decision("judge", "2+2=4", "no", 0.9, False)
-    out = jev_log.mark_disagreement(decision_id)
+    decision_id = djaevin_log.log_decision("judge", "2+2=4", "no", 0.9, False)
+    out = djaevin_log.mark_disagreement(decision_id)
     assert out == {"ok": True, "promoted_to_examples": False}
-    out = jev_log.mark_disagreement(9999)
+    out = djaevin_log.mark_disagreement(9999)
     assert out["ok"] is False
 
 
 def test_few_shot_block_empty_when_no_examples(db):
-    assert jev_log.few_shot_block("gate", "qualquer coisa") == ""
+    assert djaevin_log.few_shot_block("gate", "qualquer coisa") == ""
 
 
 def test_few_shot_block_format(db):
-    decision_id = jev_log.log_decision(
+    decision_id = djaevin_log.log_decision(
         "judge", "Chove sempre em Lisboa.", "yes", 0.8, False)
-    jev_log.mark_disagreement(decision_id, "no")
-    block = jev_log.few_shot_block("judge", "Chove em Lisboa?")
+    djaevin_log.mark_disagreement(decision_id, "no")
+    block = djaevin_log.few_shot_block("judge", "Chove em Lisboa?")
     assert "Exemplos validados" in block
     assert 'Correto: "no"' in block
     assert block.endswith("---\n")
 
 
 def test_few_shot_is_scoped_per_tool(db):
-    decision_id = jev_log.log_decision("rate", "texto x", "1", 0.5, False)
-    jev_log.mark_disagreement(decision_id, "5")
-    assert jev_log.get_few_shot("judge", "texto x") == []
-    assert jev_log.get_few_shot("rate", "texto x")[0]["choice"] == "5"
+    decision_id = djaevin_log.log_decision("rate", "texto x", "1", 0.5, False)
+    djaevin_log.mark_disagreement(decision_id, "5")
+    assert djaevin_log.get_few_shot("judge", "texto x") == []
+    assert djaevin_log.get_few_shot("rate", "texto x")[0]["choice"] == "5"
 
 
 def test_calibrate_reports_disagreements(db):
-    bad = jev_log.log_decision("rate", "a", "5", 0.4, False)
-    jev_log.log_decision("rate", "b", "3", 0.9, False)
-    jev_log.mark_disagreement(bad, "1")
-    out = jev_log.calibrate(0.6)
+    bad = djaevin_log.log_decision("rate", "a", "5", 0.4, False)
+    djaevin_log.log_decision("rate", "b", "3", 0.9, False)
+    djaevin_log.mark_disagreement(bad, "1")
+    out = djaevin_log.calibrate(0.6)
     assert out["total_disagreements"] == 1
     report = out["reports"][0]
     assert report["tool"] == "rate"
@@ -73,19 +73,19 @@ def test_calibrate_reports_disagreements(db):
 
 
 def test_calibrate_empty_is_valid(db):
-    out = jev_log.calibrate(0.6)
+    out = djaevin_log.calibrate(0.6)
     assert out["reports"] == []
     assert out["total_disagreements"] == 0
 
 
 def test_calibrate_per_tool_threshold_map(db):
-    bad = jev_log.log_decision("rate", "a", "5", 0.4, False)
-    jev_log.mark_disagreement(bad, "1")
-    out = jev_log.calibrate({"rate": 0.75, "default": 0.6})
+    bad = djaevin_log.log_decision("rate", "a", "5", 0.4, False)
+    djaevin_log.mark_disagreement(bad, "1")
+    out = djaevin_log.calibrate({"rate": 0.75, "default": 0.6})
     assert out["reports"][0]["current_threshold"] == 0.75
-    bad = jev_log.log_decision("judge", "b", "no", 0.4, False)
-    jev_log.mark_disagreement(bad, "yes")
-    out = jev_log.calibrate({"rate": 0.75, "default": 0.6})
+    bad = djaevin_log.log_decision("judge", "b", "no", 0.4, False)
+    djaevin_log.mark_disagreement(bad, "yes")
+    out = djaevin_log.calibrate({"rate": 0.75, "default": 0.6})
     judge_report = next(r for r in out["reports"] if r["tool"] == "judge")
     assert judge_report["current_threshold"] == 0.6  # fallback para default
 
@@ -103,12 +103,12 @@ def test_parse_thresholds(monkeypatch):
 
 
 def test_usage_summary_tracks_model_and_cost(db):
-    jev_log.log_decision("judge", "a", "yes", 0.9, False,
+    djaevin_log.log_decision("judge", "a", "yes", 0.9, False,
                          model="swe-2", cost=0.0)
-    jev_log.log_decision("judge", "b", "no", 0.9, False,
+    djaevin_log.log_decision("judge", "b", "no", 0.9, False,
                          model="paid-model", cost=3.5)
-    jev_log.log_decision("classify", "c", "x", 0.9, False)  # backend sem custo
-    out = jev_log.usage_summary()
+    djaevin_log.log_decision("classify", "c", "x", 0.9, False)  # backend sem custo
+    out = djaevin_log.usage_summary()
     assert out["total_decisions"] == 3
     assert out["total_cost"] == 3.5
     assert out["paid_decisions"] == 1

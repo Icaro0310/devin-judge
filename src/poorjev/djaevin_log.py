@@ -1,13 +1,13 @@
-"""jev_log — auto-aprendizagem do Jevin (SQLite append-only, stdlib only).
+"""djaevin_log — auto-aprendizagem do Djævin (SQLite append-only, stdlib only).
 
 Camada dos Niveis 1 e 2 do plano de melhoria no caso de uso legitimo
 (decisoes triviais em volume):
 
-- loga cada decisao bem-sucedida das 5 tools em jev_decisions;
+- loga cada decisao bem-sucedida das 5 tools em djaevin_decisions;
 - regista disagreements do Devin e promove-os a exemplos validados;
 - serve few-shot dinamico (similaridade Jaccard, sem embeddings) nas
   chamadas seguintes;
-- jev_calibrate() sugere limiares de low_confidence por tool — so sugere,
+- djaevin_calibrate() sugere limiares de low_confidence por tool — so sugere,
   nunca aplica.
 
 Nada aqui bloqueia, forca ou decide: a camada observa e sugere. Falhas da DB
@@ -23,7 +23,7 @@ import sqlite3
 from datetime import datetime, timezone
 
 _SCHEMA = """
-CREATE TABLE IF NOT EXISTS jev_decisions (
+CREATE TABLE IF NOT EXISTS djaevin_decisions (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   ts          TEXT    NOT NULL,
   tool        TEXT    NOT NULL,
@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS jev_decisions (
   low_conf    INTEGER NOT NULL,
   disagreed   INTEGER NOT NULL DEFAULT 0
 );
-CREATE TABLE IF NOT EXISTS jev_examples (
+CREATE TABLE IF NOT EXISTS djaevin_examples (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,
   tool            TEXT NOT NULL,
   input_text      TEXT NOT NULL,
@@ -45,8 +45,8 @@ CREATE TABLE IF NOT EXISTS jev_examples (
 # Colunas adicionadas depois (monitor de modelo/custo ACP). ALTER tolerante:
 # falhar com "duplicate column" so significa que ja existe.
 _MIGRATIONS = [
-    "ALTER TABLE jev_decisions ADD COLUMN model TEXT",
-    "ALTER TABLE jev_decisions ADD COLUMN cost REAL",
+    "ALTER TABLE djaevin_decisions ADD COLUMN model TEXT",
+    "ALTER TABLE djaevin_decisions ADD COLUMN cost REAL",
 ]
 
 
@@ -54,11 +54,11 @@ def _db_path() -> str:
     env = os.environ.get("POORJEV_LOG_DB")
     if env:
         return env
-    # vendor/poorjev/src/poorjev/jev_log.py -> 4 niveis acima = raiz do projeto
+    # vendor/poorjev/src/poorjev/djaevin_log.py -> 4 niveis acima = raiz do projeto
     here = os.path.dirname(os.path.abspath(__file__))
     for _ in range(4):
         here = os.path.dirname(here)
-    return os.path.join(here, "jev_log.db")
+    return os.path.join(here, "djaevin_log.db")
 
 
 def _connect() -> sqlite3.Connection:
@@ -82,7 +82,7 @@ def log_decision(tool: str, input_text: str, choice: str,
     try:
         with _connect() as con:
             cur = con.execute(
-                "INSERT INTO jev_decisions "
+                "INSERT INTO djaevin_decisions "
                 "(ts, tool, input_text, choice, confidence, low_conf, "
                 " model, cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (datetime.now(timezone.utc).isoformat(), tool, input_text,
@@ -94,23 +94,23 @@ def log_decision(tool: str, input_text: str, choice: str,
 
 
 def mark_disagreement(decision_id: int, correct_choice: str = "") -> dict:
-    """Mark a logged decision as wrong; promote to jev_examples when a
+    """Mark a logged decision as wrong; promote to djaevin_examples when a
     correct_choice is supplied."""
     try:
         with _connect() as con:
             cur = con.execute(
-                "UPDATE jev_decisions SET disagreed = 1 WHERE id = ?",
+                "UPDATE djaevin_decisions SET disagreed = 1 WHERE id = ?",
                 (decision_id,))
             if cur.rowcount == 0:
                 return {"ok": False, "error": f"decision_id {decision_id} not found"}
             promoted = False
             if correct_choice:
                 row = con.execute(
-                    "SELECT tool, input_text FROM jev_decisions WHERE id = ?",
+                    "SELECT tool, input_text FROM djaevin_decisions WHERE id = ?",
                     (decision_id,)).fetchone()
                 if row:
                     con.execute(
-                        "INSERT INTO jev_examples "
+                        "INSERT INTO djaevin_examples "
                         "(tool, input_text, correct_choice, added_ts) "
                         "VALUES (?, ?, ?, ?)",
                         (row[0], row[1], str(correct_choice),
@@ -136,7 +136,7 @@ def get_few_shot(tool: str, input_text: str, n: int = 3) -> list[dict]:
     try:
         with _connect() as con:
             rows = con.execute(
-                "SELECT input_text, correct_choice FROM jev_examples "
+                "SELECT input_text, correct_choice FROM djaevin_examples "
                 "WHERE tool = ?", (tool,)).fetchall()
     except (OSError, sqlite3.Error):
         return []
@@ -171,7 +171,7 @@ def calibrate(current_threshold) -> dict:
     try:
         with _connect() as con:
             rows = con.execute(
-                "SELECT tool, AVG(confidence), COUNT(*) FROM jev_decisions "
+                "SELECT tool, AVG(confidence), COUNT(*) FROM djaevin_decisions "
                 "WHERE disagreed = 1 GROUP BY tool").fetchall()
     except (OSError, sqlite3.Error) as error:
         return {"error": f"{type(error).__name__}: {error}"}
@@ -195,15 +195,15 @@ def usage_summary() -> dict:
         with _connect() as con:
             per_model = con.execute(
                 "SELECT COALESCE(model, '(sem modelo)'), COUNT(*), "
-                "COALESCE(SUM(cost), 0) FROM jev_decisions "
+                "COALESCE(SUM(cost), 0) FROM djaevin_decisions "
                 "GROUP BY model").fetchall()
             per_tool = con.execute(
                 "SELECT tool, COUNT(*), COALESCE(SUM(cost), 0) "
-                "FROM jev_decisions GROUP BY tool").fetchall()
+                "FROM djaevin_decisions GROUP BY tool").fetchall()
             total = con.execute(
                 "SELECT COUNT(*), COALESCE(SUM(cost), 0), "
                 "SUM(CASE WHEN cost > 0 THEN 1 ELSE 0 END) "
-                "FROM jev_decisions").fetchone()
+                "FROM djaevin_decisions").fetchone()
     except (OSError, sqlite3.Error) as error:
         return {"error": f"{type(error).__name__}: {error}"}
     return {

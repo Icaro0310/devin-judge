@@ -27,13 +27,13 @@ import re
 
 from .client import Client
 from .primitives import Choice, Score, Noul
-from . import jev_log
+from . import djaevin_log
 
 
 # --------------------------------------------------------------------------- #
-# DERIVA DESATIVADA (reversivel) — ver JEV-LOCAL.md
+# DERIVA DESATIVADA (reversivel) — ver DJAEVIN-LOCAL.md
 #
-# O Jevin original: 5 tools MCP opt-in que respondem e devolvem
+# O Djævin original: 5 tools MCP opt-in que respondem e devolvem
 # distribuicao/confianca; o Devin decide o que fazer. Nada bloqueia, nada abstem
 # sozinho, nada corre automaticamente.
 #
@@ -42,12 +42,12 @@ from . import jev_log
 # --------------------------------------------------------------------------- #
 
 # Abstention em runtime: existia para o gate automatico poder dizer "nao sei" e
-# bloquear. O Jevin original responde sempre com value + confidence.
+# bloquear. O Djævin original responde sempre com value + confidence.
 # Reativar: POORJEV_ABSTAIN=on
 ABSTAIN_ENABLED = os.environ.get("POORJEV_ABSTAIN", "off").strip().lower() == "on"
 
 # Tools `usage` e `keepalive`: existiam para medir o gate e manter o modelo
-# quente para ele. O Jevin original tem exatamente 5 tools.
+# quente para ele. O Djævin original tem exatamente 5 tools.
 # Reativar: POORJEV_EXTRA_TOOLS=on
 EXTRA_TOOLS_ENABLED = os.environ.get("POORJEV_EXTRA_TOOLS", "off").strip().lower() == "on"
 
@@ -64,7 +64,7 @@ ABSTAIN = "ABSTAIN"
 # Limiar de low_confidence do contrato hibrido: informativo, nunca imposto.
 # POORJEV_LOW_CONFIDENCE aceita um float global ("0.6") ou um mapa JSON por
 # tool: '{"rate": 0.75, "judge": 0.5, "default": 0.6}' — alinhado com o que
-# jev_calibrate() reporta por tool.
+# djaevin_calibrate() reporta por tool.
 def _parse_thresholds(raw: str) -> dict:
     try:
         parsed = json.loads(raw)
@@ -115,7 +115,7 @@ def _levels(scale) -> "list[str] | dict":
 def load_calibration(calibrator_path: str | None) -> dict[str, float]:
     """Load serving calibration.
 
-    `temperature` (calibracao de confianca) e do Jevin original e fica sempre
+    `temperature` (calibracao de confianca) e do Djævin original e fica sempre
     ativa. `abstain_threshold` so e aplicado quando POORJEV_ABSTAIN=on; por
     omissao e 0.0, ou seja as tools respondem sempre em vez de absterem.
     """
@@ -313,7 +313,7 @@ def build_server(calibrator_path: str | None = "calibration.json"):
         }
 
     def _log(tool, input_text, choice, confidence, low_conf):
-        return jev_log.log_decision(
+        return djaevin_log.log_decision(
             tool, input_text, choice, confidence, low_conf,
             **_usage_fields())
 
@@ -322,7 +322,7 @@ def build_server(calibrator_path: str | None = "calibration.json"):
     def _judge(statement: str, context: str = "", record: bool = True) -> dict:
         premise = context or _JUDGE_PREMISE
         if record:
-            premise = jev_log.few_shot_block("judge", statement) + premise
+            premise = djaevin_log.few_shot_block("judge", statement) + premise
         try:
             ans = do_judge(client, premise, statement)
         except Exception as error:
@@ -347,7 +347,7 @@ def build_server(calibrator_path: str | None = "calibration.json"):
                   record: bool = True) -> dict:
         body = f"{context}\n{text}" if context else text
         if record:
-            body = jev_log.few_shot_block("classify", text) + body
+            body = djaevin_log.few_shot_block("classify", text) + body
         try:
             ans = do_classify(client, body, [str(o) for o in options])
         except Exception as error:
@@ -373,7 +373,7 @@ def build_server(calibrator_path: str | None = "calibration.json"):
             return levels
         body = f"{text}\nCriteria: {criteria}" if criteria else text
         if record:
-            body = jev_log.few_shot_block("rate", text) + body
+            body = djaevin_log.few_shot_block("rate", text) + body
         try:
             ans = do_rate(client, body, levels)
         except Exception as error:
@@ -440,7 +440,7 @@ def build_server(calibrator_path: str | None = "calibration.json"):
         Pure opinion — nothing is blocked, approved or enforced."""
         hint = f" (concern: {kind})" if kind else ""
         risk = _classify(
-            jev_log.few_shot_block("gate", action)
+            djaevin_log.few_shot_block("gate", action)
             + f"Action: {action}{hint}\nDoes it move money or delete/destroy "
             f"data? Rate the risk level.",
             GATE_RISK_LEVELS, record=False)
@@ -481,23 +481,23 @@ def build_server(calibrator_path: str | None = "calibration.json"):
         `correct_choice`, the pair input->correct is promoted to validated
         few-shot examples. Only mark when the right answer is obvious —
         disagreement on ambiguous questions has no value."""
-        return jev_log.mark_disagreement(decision_id, correct_choice)
+        return djaevin_log.mark_disagreement(decision_id, correct_choice)
 
     @server.tool()
-    def jev_calibrate() -> dict:
+    def djaevin_calibrate() -> dict:
         """Report: mean confidence on disagreed decisions per tool and a
         suggested low_confidence threshold. Suggestion only — change
         POORJEV_LOW_CONFIDENCE manually if you agree; nothing is applied."""
-        return jev_log.calibrate(LOW_CONFIDENCE_THRESHOLDS)
+        return djaevin_log.calibrate(LOW_CONFIDENCE_THRESHOLDS)
 
     @server.tool()
-    def jev_usage() -> dict:
+    def djaevin_usage() -> dict:
         """Model/quota monitor: decisions and measured ACP turn cost, grouped
-        by model and by tool, read from jev_log.db. Observational only — it
+        by model and by tool, read from djaevin_log.db. Observational only — it
         never changes behavior. A paid model shows up as cost > 0."""
-        return jev_log.usage_summary()
+        return djaevin_log.usage_summary()
 
-    # `usage` e `keepalive` eram instrumentacao do gate automatico, nao do Jevin
+    # `usage` e `keepalive` eram instrumentacao do gate automatico, nao do Djævin
     # original (5 tools). Ficam no codigo, registadas so com POORJEV_EXTRA_TOOLS=on.
     if EXTRA_TOOLS_ENABLED:
         @server.tool()
@@ -515,7 +515,7 @@ def build_server(calibrator_path: str | None = "calibration.json"):
             """Renew the model's keep_alive window with one trivial request.
 
             Existe para o gate automatico nao pagar cold load; nao faz parte do
-            Jevin original.
+            Djævin original.
             """
             backend = client._backend
             if not hasattr(backend, "warmup"):

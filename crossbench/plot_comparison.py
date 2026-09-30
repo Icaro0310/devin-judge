@@ -13,14 +13,14 @@ SYSTEMS = ["Jev", "von", "Laya", "poorjev"]
 COLORS = {"Jev": "#9aa0a6", "von": "#9aa0a6", "Laya": "#9aa0a6", "poorjev": "#d9534f"}
 
 BANKING77 = {
-    "Jev": json.load(open("results/banking77_jev_results.json"))["overall"],
+    "Jev": json.load(open("results/banking77_djaevin_results.json"))["overall"],
     "von": json.load(open("results/banking77_von_results.json"))["overall"],
     "Laya": json.load(open("results/banking77_laya_results.json"))["overall"],
     "poorjev": json.load(open("results/banking77_poorjev_results.json"))["overall"],
 }
 
 MULTI = {
-    "Jev": json.load(open("results/typed_decisions_jev_results.json"))["overall"],
+    "Jev": json.load(open("results/typed_decisions_djaevin_results.json"))["overall"],
     "von": json.load(open("results/typed_decisions_von_results.json"))["overall"],
     "Laya": json.load(open("results/typed_decisions_laya_results.json"))["overall"],
     "poorjev": json.load(open("results/typed_decisions_poorjev_results.json"))["calibrated_5fold_cv"],

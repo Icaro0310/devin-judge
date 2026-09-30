@@ -11,8 +11,8 @@ server process and dies with it. No watchdog, no port, no scheduler — just a
 stdio child exactly like this MCP server is to Devin.
 
 Env:
-    POORJEV_ACP_BRIDGE   path to jev-acp-bridge.mjs
-                         (default: <project root>/scripts/jev-acp-bridge.mjs)
+    POORJEV_ACP_BRIDGE   path to djaevin-acp-bridge.mjs
+                         (default: <project root>/scripts/djaevin-acp-bridge.mjs)
     POORJEV_ACP_NODE     node binary (default: "node")
     POORJEV_ACP_TIMEOUT  seconds per ACP turn (default 120)
     POORJEV_ACP_MODEL    model value to select in the session (optional)
@@ -38,7 +38,7 @@ def _project_root() -> str:
 
 
 def _default_bridge() -> str:
-    return os.path.join(_project_root(), "scripts", "jev-acp-bridge.mjs")
+    return os.path.join(_project_root(), "scripts", "djaevin-acp-bridge.mjs")
 
 
 class AcpDevinBackend:

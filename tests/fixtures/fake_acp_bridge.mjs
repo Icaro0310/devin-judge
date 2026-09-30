@@ -1,5 +1,5 @@
 /**
- * fake_acp_bridge.mjs — stand-in determinístico para jev-acp-bridge.mjs.
+ * fake_acp_bridge.mjs — stand-in determinístico para djaevin-acp-bridge.mjs.
  * Sem ACP, sem modelo: responde probs fixas para o protocolo poder ser
  * testado offline. pairs[i][1] (hypothesis) contendo "error" -> erro
  * estruturado, para exercitar o caminho de falha.

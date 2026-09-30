@@ -22,7 +22,7 @@ def _load_key():
 
 
 class JevClient:
-    def __init__(self, model="jev-latest", max_retries=5):
+    def __init__(self, model="djaevin-latest", max_retries=5):
         self.key = _load_key()
         self.model = model
         self.max_retries = max_retries
