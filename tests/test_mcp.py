@@ -45,7 +45,7 @@ def test_rate_returns_level_and_score():
 
 
 def test_gate_blocks_on_money_or_data():
-    # checks order: moves_money, deletes_data
+    # Gate original: duas perguntas nomeadas (moves_money, deletes_data).
     client = Client(backend=ScriptedBackend([0.98, 0.02]))
     out = do_gate(client, "Wire $250,000 to a new account.")
     assert out["block"] is True

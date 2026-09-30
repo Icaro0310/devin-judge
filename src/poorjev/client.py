@@ -26,12 +26,14 @@ class Backend(Protocol):
 class Client:
     def __init__(self, backend: Backend | None = None,
                  hypothesis_template: str = DEFAULT_TEMPLATE,
-                 temperature: float = 1.0):
+                 temperature: float = 1.0,
+                 abstain_threshold: float = 0.0):
         self._backend = backend
         self.hypothesis_template = hypothesis_template
         # A fitted temperature (from `poorjev calibrate`) makes ask()'s
         # confidences calibrated. 1.0 is a no-op (raw).
         self.temperature = temperature
+        self.abstain_threshold = abstain_threshold
 
     @property
     def backend(self) -> Backend:
@@ -83,7 +85,11 @@ class Client:
                 if self.temperature != 1.0:
                     from .calibration import apply_temperature
                     p_true = apply_temperature([1.0 - p_true, p_true], self.temperature)[1]
-                out[name] = prim.decide(p_true, kind="prob")
+                out[name] = prim.decide(
+                    p_true,
+                    kind="prob",
+                    abstain_below=self.abstain_threshold,
+                )
             else:
                 # entailment probs per option/level, normalised across the set
                 dist = seg
@@ -92,5 +98,9 @@ class Client:
                     total = sum(max(0.0, s) for s in seg) or 1.0
                     norm = [max(0.0, s) / total for s in seg]
                     dist = apply_temperature(norm, self.temperature)
-                out[name] = prim.decide(dist, kind="probs")
+                out[name] = prim.decide(
+                    dist,
+                    kind="probs",
+                    threshold=self.abstain_threshold,
+                )
         return out
