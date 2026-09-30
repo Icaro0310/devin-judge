@@ -144,6 +144,10 @@ class AcpDevinBackend:
                 else None)
         except (OverflowError, TypeError, ValueError):
             reported_cost = None
+        if reported_cost is None and msg.get("verified_free") is True:
+            # Ledger da sessao Devin provou totais zero — custo nulo verificado,
+            # nao confundir com "provider nao reportou".
+            reported_cost = 0.0
         self.last_cost = (
             reported_cost
             if reported_cost is not None
