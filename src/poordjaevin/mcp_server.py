@@ -28,6 +28,7 @@ import re
 from .client import Client
 from .primitives import Choice, Score, Noul
 from . import djaevin_log
+from .verdicts import noul_verdict, dist_verdict
 
 
 # --------------------------------------------------------------------------- #
@@ -328,13 +329,15 @@ def build_server(calibrator_path: str | None = "calibration.json"):
         except Exception as error:
             return _err(error)
         p_yes = ans["prob_true"]
+        low_conf = _low_conf("judge", ans["confidence"])
         out = {
             "answer": "yes" if ans["value"] is True else "no",
             "p_yes": p_yes,
             "p_no": round(1 - p_yes, 4),
             "confidence": ans["confidence"],
             "confidence_source": confidence_source,
-            "low_confidence": _low_conf("judge", ans["confidence"]),
+            "low_confidence": low_conf,
+            "verdict": noul_verdict(p_yes, low_conf),
         }
         if record:
             out.update(_usage_fields())
@@ -352,12 +355,14 @@ def build_server(calibrator_path: str | None = "calibration.json"):
             ans = do_classify(client, body, [str(o) for o in options])
         except Exception as error:
             return _err(error)
+        low_conf = _low_conf("classify", ans["confidence"])
         out = {
             "choice": ans["value"],
             "distribution": ans["probs"],
             "confidence": ans["confidence"],
             "confidence_source": confidence_source,
-            "low_confidence": _low_conf("classify", ans["confidence"]),
+            "low_confidence": low_conf,
+            "verdict": dist_verdict(low_conf),
         }
         if record:
             out.update(_usage_fields())
@@ -378,13 +383,15 @@ def build_server(calibrator_path: str | None = "calibration.json"):
             ans = do_rate(client, body, levels)
         except Exception as error:
             return _err(error)
+        low_conf = _low_conf("rate", ans["confidence"])
         out = {
             "level": ans["value"],
             "score": ans["score"],
             "distribution": ans["distribution"],
             "confidence": ans["confidence"],
             "confidence_source": confidence_source,
-            "low_confidence": _low_conf("rate", ans["confidence"]),
+            "low_confidence": low_conf,
+            "verdict": dist_verdict(low_conf),
         }
         if record:
             out.update(_usage_fields())
@@ -453,12 +460,14 @@ def build_server(calibrator_path: str | None = "calibration.json"):
         for name, stmt in DEFAULT_GATE_CHECKS.items():
             check = _judge(stmt, action, record=False)
             details[name] = check.get("p_yes") if "error" not in check else check
+        low_conf = _low_conf("gate", risk["confidence"])
         out = {
             "risk": risk["choice"],
             "distribution": risk["distribution"],
             "confidence": risk["confidence"],
             "confidence_source": confidence_source,
-            "low_confidence": _low_conf("gate", risk["confidence"]),
+            "low_confidence": low_conf,
+            "verdict": dist_verdict(low_conf),
             "advisory": True,
             "details": details,
         }
