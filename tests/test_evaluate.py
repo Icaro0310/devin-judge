@@ -5,8 +5,8 @@ report slices by task.
 
 import json
 
-from poorjev import Client
-from poorjev.evaluate import evaluate, report
+from poordjaevin import Client
+from poordjaevin.evaluate import evaluate, report
 
 
 class ScriptedBackend:

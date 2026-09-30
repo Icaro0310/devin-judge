@@ -1,8 +1,8 @@
-"""poorjev command line.
+"""poordjaevin command line.
 
-    poorjev eval   --set evalset/tasks.jsonl [--plots] [--verbose]
-    poorjev ask    --state-file ticket.txt --questions questions.yaml   (M4+)
-    poorjev calibrate --set evalset/tasks.jsonl                          (M4)
+    poordjaevin eval   --set evalset/tasks.jsonl [--plots] [--verbose]
+    poordjaevin ask    --state-file ticket.txt --questions questions.yaml   (M4+)
+    poordjaevin calibrate --set evalset/tasks.jsonl                          (M4)
 
 M3 ships ``eval``: run the set through the local backend and print accuracy +
 ECE + Brier + AURC, overall and per task. ``--plots`` writes the reliability
@@ -44,11 +44,11 @@ def cmd_eval(args) -> int:
     if args.plots:
         try:
             from .plots import reliability_diagram
-            out = reliability_diagram(records, title="poorjev, raw (uncalibrated)",
+            out = reliability_diagram(records, title="poordjaevin, raw (uncalibrated)",
                                       path=args.plot_path)
             print(f"\nwrote reliability diagram -> {out}")
         except ImportError:
-            print("\n[--plots needs the 'plots' extra: pip install 'poorjev[plots]']")
+            print("\n[--plots needs the 'plots' extra: pip install 'poordjaevin[plots]']")
     return 0
 
 
@@ -93,7 +93,7 @@ def cmd_calibrate(args) -> int:
             print(f"wrote {p1}")
             print(f"wrote {p2}")
         except ImportError:
-            print("[--plots needs the 'plots' extra: pip install 'poorjev[plots]']")
+            print("[--plots needs the 'plots' extra: pip install 'poordjaevin[plots]']")
     return 0
 
 
@@ -137,14 +137,14 @@ def cmd_ask(args) -> int:
 
 def cmd_serve(args) -> int:
     from .mcp_server import main as serve_main
-    print("Starting poorjev MCP server (stdio). Add it to your MCP client config.",
+    print("Starting poordjaevin MCP server (stdio). Add it to your MCP client config.",
           file=sys.stderr)
     serve_main(calibrator_path=args.calibrator)
     return 0
 
 
 def main(argv=None) -> int:
-    p = argparse.ArgumentParser(prog="poorjev", description="the poor man's Jev")
+    p = argparse.ArgumentParser(prog="poordjaevin", description="the poor man's Jev")
     sub = p.add_subparsers(dest="command", required=True)
 
     pe = sub.add_parser("eval", help="score the eval set (accuracy + calibration)")
@@ -159,7 +159,7 @@ def main(argv=None) -> int:
     pa.add_argument("--state-file", help="read state from a file")
     pa.add_argument("--questions", required=True, help="JSON file: {name: spec}")
     pa.add_argument("--calibrator", default="calibration.json",
-                    help="JSON from `poorjev calibrate` (applies the fitted temperature)")
+                    help="JSON from `poordjaevin calibrate` (applies the fitted temperature)")
     pa.set_defaults(func=cmd_ask)
 
     pc = sub.add_parser("calibrate", help="fit calibration on the eval set")

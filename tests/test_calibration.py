@@ -5,8 +5,8 @@ before we report any before/after number. No model involved.
 import math
 import random
 
-from poorjev.metrics import DecisionRecord, ece
-from poorjev.calibration import (
+from poordjaevin.metrics import DecisionRecord, ece
+from poordjaevin.calibration import (
     apply_temperature, fit_temperature, cross_val_calibrate,
     fit_abstention_threshold, summarize_calibration,
 )

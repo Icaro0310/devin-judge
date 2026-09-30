@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "poorjev"
+name = "poordjaevin"
 version = "0.1.0"
-description = "The poor man's Jev: a local-first System One decision layer with provably calibrated confidence."
+description = "A local-first System One decision layer with provably calibrated confidence. Fork renamed from poorjev to avoid collision with the existing 'Jev' name."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
@@ -32,13 +32,13 @@ mcp = ["mcp>=1.2"]
 dev = ["pytest>=8.0", "pytest-cov>=5.0"]
 
 [project.scripts]
-poorjev = "poorjev.cli:main"
+poordjaevin = "poordjaevin.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/rupeshpoojary9/poorjev"
+Upstream = "https://github.com/rupeshpoojary9/poorjev"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/poorjev"]
+packages = ["src/poordjaevin"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

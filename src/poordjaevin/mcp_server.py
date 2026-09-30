@@ -1,9 +1,9 @@
-"""poorjev as an MCP server: a fast, local, calibrated decision layer that any
+"""poordjaevin as an MCP server: a fast, local, calibrated decision layer that any
 MCP client (Claude Code, Claude Desktop) can call as tools.
 
 The point: an agent that wants to gate a tool call, route a request, or classify
 an input should not pay an LLM round trip and token cost for a decision, and
-should not trust an uncalibrated made-up confidence. poorjev answers locally,
+should not trust an uncalibrated made-up confidence. poordjaevin answers locally,
 with no API key, and its confidence is calibrated.
 
 Tools exposed (advisory contract — every answer is data, never a command):
@@ -43,13 +43,13 @@ from . import djaevin_log
 
 # Abstention em runtime: existia para o gate automatico poder dizer "nao sei" e
 # bloquear. O Djævin original responde sempre com value + confidence.
-# Reativar: POORJEV_ABSTAIN=on
-ABSTAIN_ENABLED = os.environ.get("POORJEV_ABSTAIN", "off").strip().lower() == "on"
+# Reativar: POORDJAEVIN_ABSTAIN=on
+ABSTAIN_ENABLED = os.environ.get("POORDJAEVIN_ABSTAIN", "off").strip().lower() == "on"
 
 # Tools `usage` e `keepalive`: existiam para medir o gate e manter o modelo
 # quente para ele. O Djævin original tem exatamente 5 tools.
-# Reativar: POORJEV_EXTRA_TOOLS=on
-EXTRA_TOOLS_ENABLED = os.environ.get("POORJEV_EXTRA_TOOLS", "off").strip().lower() == "on"
+# Reativar: POORDJAEVIN_EXTRA_TOOLS=on
+EXTRA_TOOLS_ENABLED = os.environ.get("POORDJAEVIN_EXTRA_TOOLS", "off").strip().lower() == "on"
 
 # Gate original: duas perguntas nomeadas (dinheiro, dados), com detalhe por
 # categoria. A variante de pergunta unica foi uma otimizacao do gate automatico.
@@ -62,7 +62,7 @@ DEFAULT_GATE_CHECKS = {
 ABSTAIN = "ABSTAIN"
 
 # Limiar de low_confidence do contrato hibrido: informativo, nunca imposto.
-# POORJEV_LOW_CONFIDENCE aceita um float global ("0.6") ou um mapa JSON por
+# POORDJAEVIN_LOW_CONFIDENCE aceita um float global ("0.6") ou um mapa JSON por
 # tool: '{"rate": 0.75, "judge": 0.5, "default": 0.6}' — alinhado com o que
 # djaevin_calibrate() reporta por tool.
 def _parse_thresholds(raw: str) -> dict:
@@ -76,7 +76,7 @@ def _parse_thresholds(raw: str) -> dict:
 
 
 LOW_CONFIDENCE_THRESHOLDS = _parse_thresholds(
-    os.environ.get("POORJEV_LOW_CONFIDENCE", "0.6"))
+    os.environ.get("POORDJAEVIN_LOW_CONFIDENCE", "0.6"))
 LOW_CONFIDENCE_THRESHOLD = LOW_CONFIDENCE_THRESHOLDS["default"]
 
 
@@ -116,7 +116,7 @@ def load_calibration(calibrator_path: str | None) -> dict[str, float]:
     """Load serving calibration.
 
     `temperature` (calibracao de confianca) e do Djævin original e fica sempre
-    ativa. `abstain_threshold` so e aplicado quando POORJEV_ABSTAIN=on; por
+    ativa. `abstain_threshold` so e aplicado quando POORDJAEVIN_ABSTAIN=on; por
     omissao e 0.0, ou seja as tools respondem sempre em vez de absterem.
     """
     defaults = {"temperature": 1.0, "abstain_threshold": 0.0}
@@ -256,18 +256,18 @@ def _make_app(name: str):
         return FastMCP(name)
     except ImportError as e:  # pragma: no cover
         raise ImportError(
-            "The MCP server needs the 'mcp' extra: pip install 'poorjev[local,mcp]'"
+            "The MCP server needs the 'mcp' extra: pip install 'poordjaevin[local,mcp]'"
         ) from e
 
 
 def _select_backend():
-    """Pick the scoring backend via POORJEV_BACKEND env var.
+    """Pick the scoring backend via POORDJAEVIN_BACKEND env var.
 
     "ollama" (default) uses the local Ollama server with first-token logprobs —
     no model download, no torch. "nli" falls back to the original local NLI
     backend, which lazily needs the 'local' extra (torch + transformers).
     """
-    name = os.environ.get("POORJEV_BACKEND", "ollama").lower()
+    name = os.environ.get("POORDJAEVIN_BACKEND", "ollama").lower()
     if name == "ollama":
         from .backends.ollama_logits import OllamaLogitsBackend
         return OllamaLogitsBackend()
@@ -277,7 +277,7 @@ def _select_backend():
     if name == "nli":
         return None  # Client lazily builds LocalNLIBackend
     raise ValueError(
-        f"unknown POORJEV_BACKEND: {name!r} (expected 'ollama', 'acp' or 'nli')")
+        f"unknown POORDJAEVIN_BACKEND: {name!r} (expected 'ollama', 'acp' or 'nli')")
 
 
 def build_client(calibrator_path: str | None = "calibration.json", backend=None) -> Client:
@@ -297,7 +297,7 @@ def build_server(calibrator_path: str | None = "calibration.json"):
     # OllamaLogitsBackend.warmup() para reativar:
     #   threading.Thread(target=client._backend.warmup, daemon=True).start()
     client = build_client(calibrator_path)
-    server = _make_app("poorjev")
+    server = _make_app("poordjaevin")
     # Proveniencia da confianca: "logprobs" (ollama/nli) ou "self_report"
     # (acp) — o campo nunca finge ser probabilidade calibrada quando nao e.
     confidence_source = getattr(
@@ -487,7 +487,7 @@ def build_server(calibrator_path: str | None = "calibration.json"):
     def djaevin_calibrate() -> dict:
         """Report: mean confidence on disagreed decisions per tool and a
         suggested low_confidence threshold. Suggestion only — change
-        POORJEV_LOW_CONFIDENCE manually if you agree; nothing is applied."""
+        POORDJAEVIN_LOW_CONFIDENCE manually if you agree; nothing is applied."""
         return djaevin_log.calibrate(LOW_CONFIDENCE_THRESHOLDS)
 
     @server.tool()
@@ -498,7 +498,7 @@ def build_server(calibrator_path: str | None = "calibration.json"):
         return djaevin_log.usage_summary()
 
     # `usage` e `keepalive` eram instrumentacao do gate automatico, nao do Djævin
-    # original (5 tools). Ficam no codigo, registadas so com POORJEV_EXTRA_TOOLS=on.
+    # original (5 tools). Ficam no codigo, registadas so com POORDJAEVIN_EXTRA_TOOLS=on.
     if EXTRA_TOOLS_ENABLED:
         @server.tool()
         def usage() -> dict:
@@ -531,9 +531,9 @@ def build_server(calibrator_path: str | None = "calibration.json"):
 
 
 def main(calibrator_path: str | None = "calibration.json") -> None:
-    # POORJEV_CALIBRATOR (env) wins over the default relative path, so the MCP
+    # POORDJAEVIN_CALIBRATOR (env) wins over the default relative path, so the MCP
     # config can point at an absolute calibrator regardless of the server's cwd.
-    calibrator_path = os.environ.get("POORJEV_CALIBRATOR", calibrator_path)
+    calibrator_path = os.environ.get("POORDJAEVIN_CALIBRATOR", calibrator_path)
     build_server(calibrator_path).run()  # stdio transport
 
 

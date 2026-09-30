@@ -30,7 +30,7 @@ class Client:
                  abstain_threshold: float = 0.0):
         self._backend = backend
         self.hypothesis_template = hypothesis_template
-        # A fitted temperature (from `poorjev calibrate`) makes ask()'s
+        # A fitted temperature (from `poordjaevin calibrate`) makes ask()'s
         # confidences calibrated. 1.0 is a no-op (raw).
         self.temperature = temperature
         self.abstain_threshold = abstain_threshold

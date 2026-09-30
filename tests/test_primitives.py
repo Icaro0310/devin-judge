@@ -1,6 +1,6 @@
 """M1 invariant tests: schema validity is structural.
 
-The headline claim of poorjev is Jev's "0 type errors", made honest: no matter
+The headline claim of poordjaevin is Jev's "0 type errors", made honest: no matter
 what a backend feeds a primitive, the answer's ``value`` is always drawn from
 the declared set and the probabilities always form a valid distribution. These
 tests hammer ``decide`` with adversarial score vectors (NaN, inf, negatives,
@@ -12,8 +12,8 @@ import random
 
 import pytest
 
-from poorjev import Choice, Score, Noul
-from poorjev.primitives import softmax, normalize_probs, sigmoid
+from poordjaevin import Choice, Score, Noul
+from poordjaevin.primitives import softmax, normalize_probs, sigmoid
 
 
 # --------------------------------------------------------------------------- #

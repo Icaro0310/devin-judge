@@ -13,7 +13,7 @@ Camada dos Niveis 1 e 2 do plano de melhoria no caso de uso legitimo
 Nada aqui bloqueia, forca ou decide: a camada observa e sugere. Falhas da DB
 sao fail-open — um problema de log nunca impede uma decisao de ser devolvida.
 
-Config: POORJEV_LOG_DB (caminho do ficheiro; default = raiz do projeto).
+Config: POORDJAEVIN_LOG_DB (caminho do ficheiro; default = raiz do projeto).
 """
 
 from __future__ import annotations
@@ -51,10 +51,10 @@ _MIGRATIONS = [
 
 
 def _db_path() -> str:
-    env = os.environ.get("POORJEV_LOG_DB")
+    env = os.environ.get("POORDJAEVIN_LOG_DB")
     if env:
         return env
-    # vendor/poorjev/src/poorjev/djaevin_log.py -> 4 niveis acima = raiz do projeto
+    # vendor/poordjaevin/src/poordjaevin/djaevin_log.py -> 4 niveis acima = raiz do projeto
     here = os.path.dirname(os.path.abspath(__file__))
     for _ in range(4):
         here = os.path.dirname(here)

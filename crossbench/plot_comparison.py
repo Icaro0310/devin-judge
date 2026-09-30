@@ -1,6 +1,6 @@
 """
 Renders docs/vs_field_benchmark.png from the raw result JSONs in results/ --
-the chart form of the "poorjev vs the field" table in the main README.
+the chart form of the "poordjaevin vs the field" table in the main README.
 
 Usage (from crossbench/):
     pip install matplotlib
@@ -9,21 +9,21 @@ Usage (from crossbench/):
 import json
 import matplotlib.pyplot as plt
 
-SYSTEMS = ["Jev", "von", "Laya", "poorjev"]
-COLORS = {"Jev": "#9aa0a6", "von": "#9aa0a6", "Laya": "#9aa0a6", "poorjev": "#d9534f"}
+SYSTEMS = ["Jev", "von", "Laya", "poordjaevin"]
+COLORS = {"Jev": "#9aa0a6", "von": "#9aa0a6", "Laya": "#9aa0a6", "poordjaevin": "#d9534f"}
 
 BANKING77 = {
     "Jev": json.load(open("results/banking77_djaevin_results.json"))["overall"],
     "von": json.load(open("results/banking77_von_results.json"))["overall"],
     "Laya": json.load(open("results/banking77_laya_results.json"))["overall"],
-    "poorjev": json.load(open("results/banking77_poorjev_results.json"))["overall"],
+    "poordjaevin": json.load(open("results/banking77_poordjaevin_results.json"))["overall"],
 }
 
 MULTI = {
     "Jev": json.load(open("results/typed_decisions_djaevin_results.json"))["overall"],
     "von": json.load(open("results/typed_decisions_von_results.json"))["overall"],
     "Laya": json.load(open("results/typed_decisions_laya_results.json"))["overall"],
-    "poorjev": json.load(open("results/typed_decisions_poorjev_results.json"))["calibrated_5fold_cv"],
+    "poordjaevin": json.load(open("results/typed_decisions_poordjaevin_results.json"))["calibrated_5fold_cv"],
 }
 
 
@@ -42,7 +42,7 @@ def bar(ax, data, metric, title, ylabel, lower_is_better=False):
 
 
 fig, axes = plt.subplots(2, 2, figsize=(10, 7))
-fig.suptitle("poorjev vs the field -- independently measured, same inputs, same metrics code",
+fig.suptitle("poordjaevin vs the field -- independently measured, same inputs, same metrics code",
              fontsize=12, fontweight="bold")
 
 bar(axes[0, 0], BANKING77, "accuracy", "Banking77 (77-way choice, n=154) -- Accuracy", "accuracy")
@@ -51,7 +51,7 @@ bar(axes[1, 0], MULTI, "accuracy", "Multi-primitive set (n=160) -- Accuracy", "a
 bar(axes[1, 1], MULTI, "ece", "Multi-primitive set -- ECE", "ECE", lower_is_better=True)
 
 fig.text(0.5, 0.01,
-         "poorjev highlighted in red. Full methodology, fairness notes, and raw results: crossbench/",
+         "poordjaevin highlighted in red. Full methodology, fairness notes, and raw results: crossbench/",
          ha="center", fontsize=8, color="#666")
 fig.tight_layout(rect=(0, 0.03, 1, 0.95))
 fig.savefig("../docs/vs_field_benchmark.png", dpi=150)

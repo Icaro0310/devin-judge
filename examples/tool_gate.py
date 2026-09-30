@@ -10,7 +10,7 @@ rule, or a human) split. When perception is not confident, abstain and escalate.
     python examples/tool_gate.py
 """
 
-from poorjev import Client, Noul
+from poordjaevin import Client, Noul
 
 CANDIDATE_ACTIONS = [
     "Run `SELECT name, email FROM users LIMIT 10`.",

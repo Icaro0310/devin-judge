@@ -1,7 +1,7 @@
 """
 Builds data/banking77_sample.jsonl: a stratified, seeded sample of Banking77
 (2 items x 77 classes = 154), pulled directly from the original PolyAI source
-repo (CC-BY-4.0). Not authored by poorjev, Laya, or TypeSafe -- a neutral,
+repo (CC-BY-4.0). Not authored by poordjaevin, Laya, or TypeSafe -- a neutral,
 independently-sourced test set.
 
 Source: https://github.com/PolyAI-LDN/task-specific-datasets

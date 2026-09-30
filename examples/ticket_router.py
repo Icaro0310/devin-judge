@@ -1,13 +1,13 @@
 """Route a support ticket with all three primitives in one pass.
 
-Run it (after `pip install 'poorjev[local]'`):
+Run it (after `pip install 'poordjaevin[local]'`):
 
     python examples/ticket_router.py
 
 First run downloads a ~400MB model once, then it is fully offline and keyless.
 """
 
-from poorjev import Client, Choice, Score, Noul
+from poordjaevin import Client, Choice, Score, Noul
 
 
 def main() -> None:

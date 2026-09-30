@@ -1,7 +1,7 @@
 """Live demo on fresh inputs (not in the eval set). Raw vs calibrated."""
 
 import json
-from poorjev import Client, Choice, Score, Noul
+from poordjaevin import Client, Choice, Score, Noul
 
 T = json.load(open("calibration.json"))["temperature"]
 raw = Client(temperature=1.0)

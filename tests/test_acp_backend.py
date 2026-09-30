@@ -7,7 +7,7 @@ import shutil
 
 import pytest
 
-from poorjev.backends.acp_devin import AcpDevinBackend
+from poordjaevin.backends.acp_devin import AcpDevinBackend
 
 FIXTURE = os.path.join(os.path.dirname(__file__),
                        "fixtures", "fake_acp_bridge.mjs")
@@ -18,7 +18,7 @@ pytestmark = pytest.mark.skipif(
 
 @pytest.fixture
 def backend(tmp_path, monkeypatch):
-    monkeypatch.delenv("POORJEV_ACP_MAX_COST", raising=False)
+    monkeypatch.delenv("POORDJAEVIN_ACP_MAX_COST", raising=False)
     return AcpDevinBackend(bridge=FIXTURE, cwd=str(tmp_path), timeout=30)
 
 
@@ -77,7 +77,7 @@ def test_missing_cost_remains_unknown_in_monitor_only_usage(backend):
 
 
 def test_quota_guard(tmp_path, monkeypatch):
-    monkeypatch.setenv("POORJEV_ACP_MAX_COST", "1")
+    monkeypatch.setenv("POORDJAEVIN_ACP_MAX_COST", "1")
     guarded = AcpDevinBackend(bridge=FIXTURE, cwd=str(tmp_path), timeout=30)
     guarded.entail_probs([("p", "free turn")])  # cost 0, ok
     with pytest.raises(RuntimeError, match="QuotaExceeded"):
@@ -85,7 +85,7 @@ def test_quota_guard(tmp_path, monkeypatch):
 
 
 def test_quota_guard_fails_closed_on_missing_cost(tmp_path, monkeypatch):
-    monkeypatch.setenv("POORJEV_ACP_MAX_COST", "0")
+    monkeypatch.setenv("POORDJAEVIN_ACP_MAX_COST", "0")
     guarded = AcpDevinBackend(bridge=FIXTURE, cwd=str(tmp_path), timeout=30)
     with pytest.raises(RuntimeError, match="QuotaExceeded: turn cost unknown"):
         guarded.entail_probs([("p", "unknown cost telemetry")])
@@ -97,7 +97,7 @@ def test_quota_guard_fails_closed_on_missing_cost(tmp_path, monkeypatch):
 
 def test_free_only_mode(tmp_path, monkeypatch):
     """At a zero ceiling, only an explicit zero passes; unknown fails closed."""
-    monkeypatch.setenv("POORJEV_ACP_MAX_COST", "0")
+    monkeypatch.setenv("POORDJAEVIN_ACP_MAX_COST", "0")
     guarded = AcpDevinBackend(bridge=FIXTURE, cwd=str(tmp_path), timeout=30)
     guarded.entail_probs([("p", "free turn")])  # cost 0 passa
     with pytest.raises(RuntimeError, match="QuotaExceeded"):
@@ -105,7 +105,7 @@ def test_free_only_mode(tmp_path, monkeypatch):
 
 
 def test_guard_disabled_by_default(tmp_path, monkeypatch):
-    monkeypatch.delenv("POORJEV_ACP_MAX_COST", raising=False)
+    monkeypatch.delenv("POORDJAEVIN_ACP_MAX_COST", raising=False)
     free = AcpDevinBackend(bridge=FIXTURE, cwd=str(tmp_path), timeout=30)
     free.entail_probs([("p", "this is a paid turn")])  # sem guard: passa
     assert free.total_cost == 5.0

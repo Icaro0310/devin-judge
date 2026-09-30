@@ -4,8 +4,8 @@ The FastMCP wiring is thin; these pin the logic the tools return.
 
 import pytest
 
-from poorjev import Client
-from poorjev.mcp_server import (
+from poordjaevin import Client
+from poordjaevin.mcp_server import (
     do_classify, do_rate, do_judge, do_gate, do_decide, load_temperature,
 )
 

@@ -1,4 +1,4 @@
-"""Calibration: the one thing poorjev gets provably right.
+"""Calibration: the one thing poordjaevin gets provably right.
 
 Two pieces:
 

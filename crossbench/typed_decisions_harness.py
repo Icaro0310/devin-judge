@@ -1,10 +1,10 @@
 """
-Run ../evalset/tasks.jsonl (poorjev's own 55-item / 160-decision
+Run ../evalset/tasks.jsonl (poordjaevin's own 55-item / 160-decision
 multi-primitive set: Choice + Score + Noul) through laya, von, or djaevin, scored
-with poorjev's own metrics.py so every system is graded by identical code.
+with poordjaevin's own metrics.py so every system is graded by identical code.
 
-For poorjev itself, just use its own CLI: `poorjev eval --set ../evalset/tasks.jsonl`
-(pip install "poorjev[local]").
+For poordjaevin itself, just use its own CLI: `poordjaevin eval --set ../evalset/tasks.jsonl`
+(pip install "poordjaevin[local]").
 
 Run from inside crossbench/:
     python typed_decisions_harness.py --system laya
@@ -15,9 +15,9 @@ import argparse
 import json
 import time
 
-from poorjev.metrics import DecisionRecord, summarize
+from poordjaevin.metrics import DecisionRecord, summarize
 
-DATA_PATH = "../evalset/tasks.jsonl"  # poorjev's own eval set, one level up from crossbench/
+DATA_PATH = "../evalset/tasks.jsonl"  # poordjaevin's own eval set, one level up from crossbench/
 
 
 def load_tasks():
@@ -145,7 +145,7 @@ if __name__ == "__main__":
     records, latencies = fn(tasks)
 
     overall = summarize(records)
-    print(f"\n== {args.system} on poorjev_evalset.jsonl (n={overall['n']}) ==")
+    print(f"\n== {args.system} on poordjaevin_evalset.jsonl (n={overall['n']}) ==")
     print(f"  acc={overall['accuracy']:.3f}  ECE={overall['ece']:.3f}  Brier={overall['brier']:.3f}  AURC={overall['aurc']:.3f}")
     lat = sorted(latencies)
     n = len(lat)

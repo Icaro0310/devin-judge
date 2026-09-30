@@ -4,12 +4,12 @@ model, no server, tmp DB per test."""
 
 import pytest
 
-from poorjev import djaevin_log
+from poordjaevin import djaevin_log
 
 
 @pytest.fixture
 def db(tmp_path, monkeypatch):
-    monkeypatch.setenv("POORJEV_LOG_DB", str(tmp_path / "djaevin_log.db"))
+    monkeypatch.setenv("POORDJAEVIN_LOG_DB", str(tmp_path / "djaevin_log.db"))
     return tmp_path / "djaevin_log.db"
 
 
@@ -91,7 +91,7 @@ def test_calibrate_per_tool_threshold_map(db):
 
 
 def test_parse_thresholds(monkeypatch):
-    from poorjev.mcp_server import _parse_thresholds, _low_conf, \
+    from poordjaevin.mcp_server import _parse_thresholds, _low_conf, \
         LOW_CONFIDENCE_THRESHOLDS
     assert _parse_thresholds("0.7") == {"default": 0.7}
     assert _parse_thresholds('{"rate": 0.75, "default": 0.5}') == {

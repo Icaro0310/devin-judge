@@ -17,12 +17,12 @@ is per-pair entailment probability, not a per-question distribution, so all
 three primitives (Choice/Score/Noul) work through this one method unchanged.
 
 Config via environment:
-    POORJEV_MODEL          model name in Ollama (default qwen2.5:1.5b)
+    POORDJAEVIN_MODEL          model name in Ollama (default qwen2.5:1.5b)
     OLLAMA_HOST            base URL (default http://localhost:11434)
-    POORJEV_TOP_LOGPROBS   how many candidates to read (default 20)
-    POORJEV_HTTP_TIMEOUT   seconds per call (default 60)
-    POORJEV_PARALLEL       max concurrent pair requests (default 4)
-    POORJEV_KEEP_ALIVE     Ollama keep-alive per request (unset = Ollama default)
+    POORDJAEVIN_TOP_LOGPROBS   how many candidates to read (default 20)
+    POORDJAEVIN_HTTP_TIMEOUT   seconds per call (default 60)
+    POORDJAEVIN_PARALLEL       max concurrent pair requests (default 4)
+    POORDJAEVIN_KEEP_ALIVE     Ollama keep-alive per request (unset = Ollama default)
 
 Dependency-free: stdlib urllib only.
 """
@@ -69,14 +69,14 @@ class OllamaLogitsBackend:
         timeout: float | None = None,
         parallel: int | None = None,
     ):
-        self.model = model or os.environ.get("POORJEV_MODEL", DEFAULT_MODEL)
+        self.model = model or os.environ.get("POORDJAEVIN_MODEL", DEFAULT_MODEL)
         self.host = _dial_host(host or os.environ.get("OLLAMA_HOST") or DEFAULT_HOST)
-        self.top_logprobs = top_logprobs or int(os.environ.get("POORJEV_TOP_LOGPROBS", "20"))
-        self.timeout = timeout or float(os.environ.get("POORJEV_HTTP_TIMEOUT", "60"))
-        self.parallel = parallel or int(os.environ.get("POORJEV_PARALLEL", "4"))
+        self.top_logprobs = top_logprobs or int(os.environ.get("POORDJAEVIN_TOP_LOGPROBS", "20"))
+        self.timeout = timeout or float(os.environ.get("POORDJAEVIN_HTTP_TIMEOUT", "60"))
+        self.parallel = parallel or int(os.environ.get("POORDJAEVIN_PARALLEL", "4"))
         # Spec: keep_alive = padrao do Ollama (~5 min) a menos que o utilizador
         # o configure. Se a env nao existir, a chave nao e enviada no pedido.
-        self.keep_alive = os.environ.get("POORJEV_KEEP_ALIVE")
+        self.keep_alive = os.environ.get("POORDJAEVIN_KEEP_ALIVE")
         self._stats_lock = threading.Lock()
         self._stats = {
             "ollama_requests": 0,
@@ -167,7 +167,7 @@ class OllamaLogitsBackend:
         }
         if self.keep_alive is not None:
             body["keep_alive"] = self.keep_alive
-        if os.environ.get("POORJEV_DEBUG_PROMPT"):
+        if os.environ.get("POORDJAEVIN_DEBUG_PROMPT"):
             # Verificacao de few-shot/limpeza: mostra o prompt gerado no stderr
             # (stdout e o canal do protocolo MCP — nunca escrever la).
             print("PROMPT>>> " + body["messages"][1]["content"],

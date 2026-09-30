@@ -1,19 +1,19 @@
 """
 Shared, neutral benchmark: Banking77 (PolyAI, original GitHub source), a
-public 77-way intent classification set. Not authored by poorjev, Laya, or
+public 77-way intent classification set. Not authored by poordjaevin, Laya, or
 TypeSafe -- and it's specifically the high-cardinality-choice case Laya's own
 README flags as Jev's strength. Stratified sample: 2 items x 77 classes = 154.
 
 All three systems get exactly the same state text and exactly the same 77
 bare (underscore-stripped) label names as their option set -- no per-option
-descriptions for anyone. Scored with poorjev's own metrics.py so all three are
+descriptions for anyone. Scored with poordjaevin's own metrics.py so all three are
 graded by identical code.
 """
 import argparse
 import json
 import time
 
-from poorjev.metrics import DecisionRecord, summarize
+from poordjaevin.metrics import DecisionRecord, summarize
 
 SAMPLE_PATH = "data/banking77_sample.jsonl"
 LABELS_PATH = "data/banking77_labels.json"
@@ -45,15 +45,15 @@ def report(name, records, latencies, out_path):
     return overall, {"p50": p50, "p95": p95}
 
 
-def run_poorjev(items, labels):
-    from poorjev.client import Client
-    from poorjev.backends.local_nli import LocalNLIBackend
-    from poorjev.primitives import Choice
+def run_poordjaevin(items, labels):
+    from poordjaevin.client import Client
+    from poordjaevin.backends.local_nli import LocalNLIBackend
+    from poordjaevin.primitives import Choice
 
     backend = LocalNLIBackend()
-    # NOTE: temperature=1.0 (raw). T=2.71 was fit on poorjev's own 4-6 option
+    # NOTE: temperature=1.0 (raw). T=2.71 was fit on poordjaevin's own 4-6 option
     # support-triage set and does not transfer to a 77-way task (see
-    # banking77_poorjev_recalibrated.json: a Banking77-specific 5-fold CV
+    # banking77_poordjaevin_recalibrated.json: a Banking77-specific 5-fold CV
     # refit lands at T=1.01, i.e. ~no-op -- so raw is the honest number here,
     # not a stale cross-task temperature).
     client = Client(backend=backend, temperature=1.0)
@@ -73,7 +73,7 @@ def run_poorjev(items, labels):
         )
         latencies.append(dt)
         if i % 20 == 0:
-            print(f"  poorjev {i}/{len(items)}")
+            print(f"  poordjaevin {i}/{len(items)}")
     return records, latencies
 
 
@@ -172,7 +172,7 @@ def run_djaevin(items, labels):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--system", required=True, choices=["poorjev", "laya", "djaevin", "von"])
+    ap.add_argument("--system", required=True, choices=["poordjaevin", "laya", "djaevin", "von"])
     ap.add_argument("--limit", type=int, default=None)
     args = ap.parse_args()
 
@@ -181,6 +181,6 @@ if __name__ == "__main__":
         items = items[: args.limit]
     print(f"Running {args.system} on {len(items)} items, {len(labels)} classes")
 
-    fn = {"poorjev": run_poorjev, "laya": run_laya, "djaevin": run_djaevin, "von": run_von}[args.system]
+    fn = {"poordjaevin": run_poordjaevin, "laya": run_laya, "djaevin": run_djaevin, "von": run_von}[args.system]
     records, latencies = fn(items, labels)
     report(args.system, records, latencies, f"results/banking77_{args.system}_results.json")

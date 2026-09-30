@@ -1,14 +1,14 @@
 # crossbench
 
-Independent, reproducible benchmark comparing `poorjev` against Jev (TypeSafe,
+Independent, reproducible benchmark comparing `poordjaevin` against Jev (TypeSafe,
 hosted), [Laya](https://huggingface.co/convaiinnovations/laya) (open weights),
 and [von](https://github.com/wfzyx/von) (open weights) — same two test sets,
-same metrics code (`poorjev`'s own `metrics.py`), for all four. The summary
+same metrics code (`poordjaevin`'s own `metrics.py`), for all four. The summary
 table and the honest reading of it live in the main
 [README's "Benchmarks" section](../README.md#benchmarks); this folder is the
 full harness behind it.
 
-**This exists because every one of these projects, including `poorjev`
+**This exists because every one of these projects, including `poordjaevin`
 before this, published numbers only against itself.** Jev's docs don't
 publish an ECE. Laya's homepage claims "ECE 0.081 vs Jev's 0.246," but
 Laya's own HuggingFace eval file reports a third, different number (0.030)
@@ -18,7 +18,7 @@ gaming benchmark. None of those numbers are comparable to each other. This
 folder runs all four through the same inputs so the numbers mean something.
 
 **Nobody sweeps.** Jev wins the multi-primitive set outright. `von` beats
-Jev on Banking77 accuracy but loses on calibration. `poorjev` is the best
+Jev on Banking77 accuracy but loses on calibration. `poordjaevin` is the best
 fully local/free option on accuracy in both sets but is not clearly better
 calibrated than Laya at Banking77's 77-way cardinality. No result here was
 cherry-picked, and the harness was not reshaped to force a particular winner
@@ -26,7 +26,7 @@ cherry-picked, and the harness was not reshaped to force a particular winner
 
 ## Test sets
 
-- `../evalset/tasks.jsonl` — poorjev's own 55-item / 160-decision set (already
+- `../evalset/tasks.jsonl` — poordjaevin's own 55-item / 160-decision set (already
   in this repo), reused here as a neutral cross-system set.
 - `data/banking77_sample.jsonl` — 154 items (2 per class), stratified sample
   of [Banking77](https://github.com/PolyAI-LDN/task-specific-datasets)
@@ -40,10 +40,10 @@ cherry-picked, and the harness was not reshaped to force a particular winner
   labels — no per-option descriptions for anyone.
 - Laya and `von` were given an enlarged option-token budget for Banking77
   per each project's own documented guidance for 50+ option questions —
-  applied identically, not a `poorjev`-only advantage.
-- `poorjev` uses `temperature=1.0` (raw) on Banking77, not its own fitted
+  applied identically, not a `poordjaevin`-only advantage.
+- `poordjaevin` uses `temperature=1.0` (raw) on Banking77, not its own fitted
   `T=2.71` — that value was fit on the 4-6 option multi-primitive set and
-  does not transfer to a 77-way task. `results/banking77_poorjev_recalibrated.json`
+  does not transfer to a 77-way task. `results/banking77_poordjaevin_recalibrated.json`
   shows a proper 5-fold CV refit *on Banking77 itself* lands at `T≈1.01`
   (essentially a no-op) — the miscalibration at this cardinality is
   structural to the small local NLI backend, not a fixable scalar.
@@ -51,20 +51,20 @@ cherry-picked, and the harness was not reshaped to force a particular winner
 ## Reproducing
 
 ```bash
-pip install "poorjev[local]" laya von-sdk
+pip install "poordjaevin[local]" laya von-sdk
 
-# poorjev, own CLI
-poorjev eval --set ../evalset/tasks.jsonl
+# poordjaevin, own CLI
+poordjaevin eval --set ../evalset/tasks.jsonl
 
 cd crossbench
 
 # Banking77
-python banking77_harness.py --system poorjev
+python banking77_harness.py --system poordjaevin
 python banking77_harness.py --system laya
 python banking77_harness.py --system von
 TYPESAFE_API_KEY=sk-... python banking77_harness.py --system djaevin
 
-# Multi-primitive set, non-poorjev systems
+# Multi-primitive set, non-poordjaevin systems
 python typed_decisions_harness.py --system laya
 python typed_decisions_harness.py --system von
 TYPESAFE_API_KEY=sk-... python typed_decisions_harness.py --system djaevin
@@ -85,6 +85,6 @@ this whole benchmark costs a few cents). No key is committed to this repo.
   flavored). Banking77 is the standard, public check.
 - Bare labels only, no rich per-option descriptions — a level playing field,
   but not how you'd deploy any of these in production.
-- Written by `poorjev`'s own author. The code and every result JSON in
+- Written by `poordjaevin`'s own author. The code and every result JSON in
   `results/` are here so anyone can check that for themselves — that's the
   actual point.

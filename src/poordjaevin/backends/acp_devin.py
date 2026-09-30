@@ -11,11 +11,11 @@ server process and dies with it. No watchdog, no port, no scheduler — just a
 stdio child exactly like this MCP server is to Devin.
 
 Env:
-    POORJEV_ACP_BRIDGE   path to djaevin-acp-bridge.mjs
+    POORDJAEVIN_ACP_BRIDGE   path to djaevin-acp-bridge.mjs
                          (default: <project root>/scripts/djaevin-acp-bridge.mjs)
-    POORJEV_ACP_NODE     node binary (default: "node")
-    POORJEV_ACP_TIMEOUT  seconds per ACP turn (default 120)
-    POORJEV_ACP_MODEL    model value to select in the session (optional)
+    POORDJAEVIN_ACP_NODE     node binary (default: "node")
+    POORDJAEVIN_ACP_TIMEOUT  seconds per ACP turn (default 120)
+    POORDJAEVIN_ACP_MODEL    model value to select in the session (optional)
 
 Stdlib only. The bridge and the model are the moving parts, not this file.
 """
@@ -30,7 +30,7 @@ import threading
 import time
 
 def _project_root() -> str:
-    # vendor/poorjev/src/poorjev/backends/acp_devin.py -> 5 niveis = raiz
+    # vendor/poordjaevin/src/poordjaevin/backends/acp_devin.py -> 5 niveis = raiz
     here = os.path.dirname(os.path.abspath(__file__))
     for _ in range(5):
         here = os.path.dirname(here)
@@ -48,12 +48,12 @@ class AcpDevinBackend:
 
     def __init__(self, bridge: str | None = None, node: str | None = None,
                  cwd: str | None = None, timeout: float | None = None):
-        self.bridge = bridge or os.environ.get("POORJEV_ACP_BRIDGE") \
+        self.bridge = bridge or os.environ.get("POORDJAEVIN_ACP_BRIDGE") \
             or _default_bridge()
-        self.node = node or os.environ.get("POORJEV_ACP_NODE", "node")
+        self.node = node or os.environ.get("POORDJAEVIN_ACP_NODE", "node")
         self.cwd = cwd or _project_root()
         self.timeout = timeout or float(
-            os.environ.get("POORJEV_ACP_TIMEOUT", "120")) * 1000 / 1000
+            os.environ.get("POORDJAEVIN_ACP_TIMEOUT", "120")) * 1000 / 1000
         self._lock = threading.Lock()
         self._cond = threading.Condition(self._lock)
         self._proc: subprocess.Popen | None = None
@@ -63,11 +63,11 @@ class AcpDevinBackend:
         self.model: str | None = None
         self.last_cost: float | None = None
         self.total_cost: float | None = None
-        # Guard opt-in: POORJEV_ACP_MAX_COST = teto de quota por turno.
+        # Guard opt-in: POORDJAEVIN_ACP_MAX_COST = teto de quota por turno.
         # Nao configurado (-1) = monitor so; custo nao reportado fica None.
         # Com qualquer teto >= 0, custo desconhecido falha fechado antes de
         # devolver scores; zero explicito passa e custos acima do teto abortam.
-        self.max_cost = float(os.environ.get("POORJEV_ACP_MAX_COST", "-1"))
+        self.max_cost = float(os.environ.get("POORDJAEVIN_ACP_MAX_COST", "-1"))
 
     # -- child process -------------------------------------------------- #
 
@@ -126,7 +126,7 @@ class AcpDevinBackend:
             raise RuntimeError(msg["error"])
         return msg
 
-    # -- poorjev backend contract --------------------------------------- #
+    # -- poordjaevin backend contract --------------------------------------- #
 
     def entail_probs(self, pairs: list[tuple[str, str]]) -> list[float]:
         """One ACP turn for the whole batch -> self-reported 0-1 scores."""
@@ -165,11 +165,11 @@ class AcpDevinBackend:
             if self.last_cost is None:
                 raise RuntimeError(
                     "QuotaExceeded: turn cost unknown; cannot verify "
-                    f"POORJEV_ACP_MAX_COST {self.max_cost} (model {self.model})")
+                    f"POORDJAEVIN_ACP_MAX_COST {self.max_cost} (model {self.model})")
             if self.last_cost > self.max_cost:
                 raise RuntimeError(
                     f"QuotaExceeded: turn cost {self.last_cost} > "
-                    f"POORJEV_ACP_MAX_COST {self.max_cost} (model {self.model})")
+                    f"POORDJAEVIN_ACP_MAX_COST {self.max_cost} (model {self.model})")
         probs = msg["probs"]
         if len(probs) != len(pairs):
             raise RuntimeError(

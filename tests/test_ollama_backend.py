@@ -1,7 +1,7 @@
 import json
 
-from poorjev.backends import ollama_logits
-from poorjev.backends.ollama_logits import OllamaLogitsBackend
+from poordjaevin.backends import ollama_logits
+from poordjaevin.backends.ollama_logits import OllamaLogitsBackend
 
 
 class FakeResponse:

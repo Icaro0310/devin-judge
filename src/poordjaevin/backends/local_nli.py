@@ -14,7 +14,7 @@ It is not the smartest option; that is the point of the optional [llm] backend.
 Here, calibration + abstention are what make moderate intelligence safe: the
 model knows when it is unsure and escalates.
 
-The heavy imports (torch, transformers) are lazy so importing poorjev, and the
+The heavy imports (torch, transformers) are lazy so importing poordjaevin, and the
 whole M1 contract, stays dependency-free.
 """
 
@@ -51,7 +51,7 @@ class LocalNLIBackend:
         except ImportError as e:  # pragma: no cover - env dependent
             raise ImportError(
                 "The local NLI backend needs the 'local' extra. "
-                "Install it with:  pip install 'poorjev[local]'"
+                "Install it with:  pip install 'poordjaevin[local]'"
             ) from e
 
         if self._device is None:

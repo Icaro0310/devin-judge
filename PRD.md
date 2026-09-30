@@ -1,4 +1,4 @@
-# PRD — `poorjev` (the poor man's Jev)
+# PRD — `poordjaevin` (the poor man's Jev)
 
 **An open-source, local-first "System One" decision layer.** Same developer interface as
 Jev (typed questions over program state, answered in one pass with **calibrated**
@@ -7,8 +7,8 @@ probabilities) but backed by small local models or any LLM, and where the one th
 
 - **Owner:** Rupesh Poojary
 - **Date:** 2026-09-19
-- **Package / repo:** `poorjev` → `pip install poorjev` → `github.com/rupeshpoojary9/poorjev`
-  - *Name is free on PyPI + GitHub as of 2026-09-19. Backups: `poormansjev`, `poorjevai`.*
+- **Package / repo:** `poordjaevin` → `pip install poordjaevin` → `github.com/rupeshpoojary9/poordjaevin`
+  - *Name is free on PyPI + GitHub as of 2026-09-19. Backups: `poormansjev`, `poordjaevinai`.*
 - **Status:** 🔴 not started — this PRD is the build spec
 - **Lane:** LLM-evals authority (pairs with `rag-eval-benchmark`, `awesome-llm-evals`). Sister project to a future `system-one-bench`.
 
@@ -16,12 +16,12 @@ probabilities) but backed by small local models or any LLM, and where the one th
 
 ## 0. The viral wedge (read this first)
 
-**Name:** `poorjev`. It carries the whole story in seven characters: open, cheap, Jev-adjacent, underdog. "Poor man's X" is a badge in dev culture, not an insult, it signals resourceful-hacker "I got 90% of the expensive thing for free." Nobody needs the joke explained; it lands in zero seconds.
+**Name:** `poordjaevin`. It carries the whole story in seven characters: open, cheap, Jev-adjacent, underdog. "Poor man's X" is a badge in dev culture, not an insult, it signals resourceful-hacker "I got 90% of the expensive thing for free." Nobody needs the joke explained; it lands in zero seconds.
 
 **The one spicy, true claim we own:** *every* "System One" project on jevusecases.com (1350+ of them) quotes speed and cost. Almost none prove their **confidence is calibrated**. Jev sells calibrated confidence but gates it behind a waitlist. So the line that spreads is:
 
 > Everyone ships an LLM in JSON mode and calls the `0.9` a "confidence." It's a vibe.
-> `poorjev` is the poor man's Jev, and it's the only one that proves its `0.9` actually means `0.9`. Runs on your laptop. No waitlist.
+> `poordjaevin` is the poor man's Jev, and it's the only one that proves its `0.9` actually means `0.9`. Runs on your laptop. No waitlist.
 
 **The one screenshot that sells it:** a **reliability diagram**, our predicted probability vs. actual accuracy, before and after calibration (ECE ~0.17 → <0.05). That single image is the launch asset. Build toward producing it (see §7, M4).
 
@@ -29,33 +29,33 @@ probabilities) but backed by small local models or any LLM, and where the one th
 
 **README hero (top of the repo):**
 ```
-poorjev
+poordjaevin
 the poor man's Jev.
 
 Poor in price. Rich in honesty.
 Typed decisions with confidence that is actually calibrated, not vibes.
 Runs on your laptop. No API key. No waitlist.
 
-pip install poorjev
+pip install poordjaevin
 ```
 
 **Launch tweet / X post:**
 ```
 Jev is a $40M waitlist.
 
-poorjev is the poor man's version: same typed-question interface, runs
+poordjaevin is the poor man's version: same typed-question interface, runs
 local with no key, and it is the ONLY one that proves its confidence is
 real (ECE 0.17 -> 0.04, reliability diagram below).
 
 Your model's 0.9 is a vibe. Mine is a measurement.
 
-pip install poorjev
+pip install poordjaevin
 [reliability-diagram.png]
 ```
 
 **Hacker News title:**
 ```
-Show HN: poorjev, a local "System One" decision layer that proves its confidence is calibrated
+Show HN: poordjaevin, a local "System One" decision layer that proves its confidence is calibrated
 ```
 
 **One-line elevator (for GitHub About + resume):**
@@ -94,7 +94,7 @@ the whole pitch, see §9.
 
 ## 2. Goal / non-goals
 
-**Goal.** A `pip install poorjev`-able Python library + CLI that:
+**Goal.** A `pip install poordjaevin`-able Python library + CLI that:
 1. exposes the three System One primitives (**Choice / Score / Noul**) over arbitrary state,
 2. answers a batch of typed questions in a **single call** with typed, schema-valid outputs,
 3. attaches a **calibrated** probability/confidence to every answer,
@@ -120,7 +120,7 @@ the whole pitch, see §9.
 Mirror the LangChain/TypeSafe shape closely enough to be a genuine drop-in mental model.
 
 ```python
-from poorjev import Client, Choice, Score, Noul
+from poordjaevin import Client, Choice, Score, Noul
 
 client = Client()                       # local backend, no key, by default
 
@@ -178,7 +178,7 @@ Reuse an NLI / zero-shot model as a general decision engine. One small model doe
 
 Default model: a small NLI checkpoint (e.g. `MoritzLaurer/deberta-v3-base` zero-shot or `all-MiniLM` + a cross-encoder). ~single-digit hundred MB, downloads once, then fully offline. **Schema validity is structural**, options/levels are fixed sets we softmax over, so an out-of-set answer is impossible by construction.
 
-**5.2 LLM backend (opt-in, `POORJEV_BACKEND=llm` + key).**
+**5.2 LLM backend (opt-in, `POORDJAEVIN_BACKEND=llm` + key).**
 Any chat LLM (Anthropic default; see `claude-api` for model IDs). Use **constrained/structured output** so the raw answer is always valid, and pull token **logprobs** for the probability. LLMs are notoriously *miscalibrated* (over-confident verbalized probs), so this backend leans hardest on §5.3 to fix that, which is itself a demonstrable result.
 
 **5.3 Calibration layer (the differentiator, backend-agnostic).**
@@ -191,13 +191,13 @@ This is what makes us more than "an LLM in JSON mode":
 ## 6. Repo layout (matches your `rag-eval-benchmark` conventions)
 
 ```
-poorjev/
+poordjaevin/
 ├── README.md                 # the §0 hero + reliability diagram above the fold, quickstart, honest claims
 ├── RESULTS.md                # real calibration + accuracy tables, reliability diagrams
 ├── PRD.md                    # this file
 ├── LICENSE                   # MIT
-├── pyproject.toml            # hatchling; extras: [llm], [plots], [dev]; script: poorjev=poorjev.cli:main
-├── src/poorjev/
+├── pyproject.toml            # hatchling; extras: [llm], [plots], [dev]; script: poordjaevin=poordjaevin.cli:main
+├── src/poordjaevin/
 │   ├── __init__.py           # exports Client, Choice, Score, Noul
 │   ├── primitives.py         # the three question types + typed Answer objects
 │   ├── client.py             # ask(): orchestrates encode → backend → calibrate → type
@@ -207,7 +207,7 @@ poorjev/
 │   ├── calibration.py        # temperature scaling + conformal prediction
 │   ├── metrics.py            # ECE, Brier, accuracy, coverage/risk
 │   ├── plots.py              # reliability diagrams, risk-coverage curves (THE launch asset)
-│   └── cli.py                # poorjev ask / eval / calibrate
+│   └── cli.py                # poordjaevin ask / eval / calibrate
 ├── evalset/                  # small hand-labelled decision set (see §7)
 │   ├── tasks.jsonl           # state + questions + gold answers
 │   └── README.md             # how it was labelled
@@ -219,10 +219,10 @@ poorjev/
 
 **CLI:**
 ```bash
-poorjev ask --state-file ticket.txt --questions questions.yaml     # one-off decision, JSON out
-poorjev eval  --set evalset/tasks.jsonl --plots                    # accuracy + ECE + Brier + coverage + reliability.png
-poorjev calibrate --set evalset/tasks.jsonl                        # fit + save temperature/conformal params
-poorjev eval  --backend llm --plots                                # same, LLM backend (needs key)
+poordjaevin ask --state-file ticket.txt --questions questions.yaml     # one-off decision, JSON out
+poordjaevin eval  --set evalset/tasks.jsonl --plots                    # accuracy + ECE + Brier + coverage + reliability.png
+poordjaevin calibrate --set evalset/tasks.jsonl                        # fit + save temperature/conformal params
+poordjaevin eval  --backend llm --plots                                # same, LLM backend (needs key)
 ```
 
 ## 7. Eval set (the part that makes it credible)
@@ -235,7 +235,7 @@ lets us report calibration honestly and it's the seed corpus for the future `sys
 
 ## 8. Success metrics / definition of done
 
-v1 ships when, on the local backend over the eval set, `poorjev eval` reports real numbers and:
+v1 ships when, on the local backend over the eval set, `poordjaevin eval` reports real numbers and:
 
 - 🎯 **Schema validity = 100%** by construction (invariant test: no `ask()` ever returns an out-of-set/wrong-type value, incl. adversarial states). This is our honest version of Jev's "0 type errors."
 - 🎯 **Calibration improves measurably** post-temperature-scaling: report **ECE before → after** and **Brier**; target a clear ECE reduction (e.g. ~0.15 → <0.05), the exact number is whatever we honestly measure.
@@ -243,13 +243,13 @@ v1 ships when, on the local backend over the eval set, `poorjev eval` reports re
 - 🎯 **Selective prediction works**: a risk-coverage curve showing accuracy rises as we abstain on low-confidence items.
 - 🎯 **Accuracy is competitive** with an "LLM-in-JSON-mode" baseline while being local/free, and where it loses, we say so.
 - 🎯 **Latency + cost reported** (not marketed) for local vs LLM backend.
-- 🎯 Runs **offline, no key**, first-run downloads one small model; `pip install -e ".[dev]" && poorjev eval` reproduces the tables.
+- 🎯 Runs **offline, no key**, first-run downloads one small model; `pip install -e ".[dev]" && poordjaevin eval` reproduces the tables.
 - 🎯 README + RESULTS.md written; tests green; MIT; pushed public.
 
 ## 9. Honest-claims guardrails (non-negotiable, your no-hype rule)
 
 - Never claim to match Jev's speed or architecture. Frame explicitly as: *interface-compatible + honestly-calibrated, on commodity models.*
-- The name is playful; the numbers are not. Every headline number in README/RESULTS is one `poorjev eval` produces on the shipped eval set. No cherry-picking, no vibes.
+- The name is playful; the numbers are not. Every headline number in README/RESULTS is one `poordjaevin eval` produces on the shipped eval set. No cherry-picking, no vibes.
 - "Poor man's" is positioning, never an excuse for a weak result. If a number is bad, we print it.
 - State the eval set is small and name what that does/doesn't prove.
 - No em-dashes in any rendered marketing/README/tweet copy (commas/colons). *(This PRD is internal, so dashes here are fine.)*
@@ -258,14 +258,14 @@ v1 ships when, on the local backend over the eval set, `poorjev eval` reports re
 
 1. **M1 — Contract & primitives.** `primitives.py`, typed `Answer` objects, schema-validity invariant tests. *(Prove the "0 type errors" claim first.)*
 2. **M2 — Local backend.** NLI/zero-shot engine for all three primitives; `ask()` single-pass. First end-to-end decision. *(Study `openjev-sglang` first, differentiate on calibration not speed.)*
-3. **M3 — Eval set + metrics.** Hand-label `tasks.jsonl`; implement ECE/Brier/accuracy/coverage; `poorjev eval` raw (uncalibrated) numbers.
+3. **M3 — Eval set + metrics.** Hand-label `tasks.jsonl`; implement ECE/Brier/accuracy/coverage; `poordjaevin eval` raw (uncalibrated) numbers.
 4. **M4 — Calibration + the money screenshot.** Temperature scaling + conformal abstention; before/after ECE; **reliability diagram + risk-coverage plot**. *(This is the differentiator AND the launch asset, don't skip to polish before it works.)*
 5. **M5 — LLM backend.** Opt-in Anthropic/structured-output + logprobs; show it's miscalibrated raw and fixed by M4.
 6. **M6 — Launch.** `ticket_router.py`, `tool_gate.py`, honest write-up, tests green, push public, then run the §0 distribution plan (jevusecases.com + Show HN + X thread + awesome-llm-evals).
 
 ## 11. Stretch / follow-ons
 
-- **`system-one-bench`**: promote `evalset/` into the standalone benchmark. Score `poorjev`, an LLM baseline, and (when access lands) Jev, on accuracy + calibration + latency/cost. You'd own the yardstick for the category.
+- **`system-one-bench`**: promote `evalset/` into the standalone benchmark. Score `poordjaevin`, an LLM baseline, and (when access lands) Jev, on accuracy + calibration + latency/cost. You'd own the yardstick for the category.
 - **System-One/System-Two router** built on conformal abstention.
-- **Vereno**: wire `poorjev` as the sub-500ms decision loop in the live-demo console.
-- LangChain-shim so `poorjev` drops into the `TypeSafeClassifier` call site.
+- **Vereno**: wire `poordjaevin` as the sub-500ms decision loop in the live-demo console.
+- LangChain-shim so `poordjaevin` drops into the `TypeSafeClassifier` call site.

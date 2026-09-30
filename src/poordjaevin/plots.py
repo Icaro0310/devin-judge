@@ -5,7 +5,7 @@ against empirical accuracy. The diagonal is perfect calibration. Bars above the
 diagonal mean under-confidence; below means over-confidence. M4 will render the
 before/after pair, and the "after" hugging the diagonal is the launch asset.
 
-matplotlib is an optional extra (`pip install 'poorjev[plots]'`) so the core
+matplotlib is an optional extra (`pip install 'poordjaevin[plots]'`) so the core
 library stays dependency-free.
 """
 
@@ -21,7 +21,7 @@ def reliability_diagram(records: list[DecisionRecord], title: str = "reliability
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
     except ImportError as e:  # pragma: no cover
-        raise ImportError("plots need matplotlib: pip install 'poorjev[plots]'") from e
+        raise ImportError("plots need matplotlib: pip install 'poordjaevin[plots]'") from e
 
     bins = reliability_bins(records, n_bins)
     width = 1.0 / n_bins
@@ -80,13 +80,13 @@ def reliability_pair(raw, calibrated, path: str = "docs/reliability_before_after
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
     except ImportError as e:  # pragma: no cover
-        raise ImportError("plots need matplotlib: pip install 'poorjev[plots]'") from e
+        raise ImportError("plots need matplotlib: pip install 'poordjaevin[plots]'") from e
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9.6, 5.0))
     _draw_reliability(ax1, raw, "raw (uncalibrated)", n_bins)
     _draw_reliability(ax2, calibrated, "calibrated (temperature scaled)", n_bins)
     ax1.set_ylabel("empirical accuracy")
-    fig.suptitle("poorjev: confidence you can trust", fontsize=13)
+    fig.suptitle("poordjaevin: confidence you can trust", fontsize=13)
     fig.tight_layout()
     fig.savefig(path, dpi=140)
     plt.close(fig)
@@ -100,7 +100,7 @@ def risk_coverage_plot(records, path: str = "docs/risk_coverage.png") -> str:
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
     except ImportError as e:  # pragma: no cover
-        raise ImportError("plots need matplotlib: pip install 'poorjev[plots]'") from e
+        raise ImportError("plots need matplotlib: pip install 'poordjaevin[plots]'") from e
 
     pts = risk_coverage(records)
     cov = [p["coverage"] for p in pts]
@@ -110,7 +110,7 @@ def risk_coverage_plot(records, path: str = "docs/risk_coverage.png") -> str:
     ax.fill_between(cov, risk, color="#4c93d6", alpha=0.12)
     ax.set_xlabel("coverage (fraction answered)")
     ax.set_ylabel("risk (error rate on answered)")
-    ax.set_title("poorjev: abstain on the hard ones, risk drops")
+    ax.set_title("poordjaevin: abstain on the hard ones, risk drops")
     ax.set_xlim(0, 1)
     ax.set_ylim(0, max(risk) * 1.1 if risk else 1)
     fig.tight_layout()
