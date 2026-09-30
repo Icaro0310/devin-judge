@@ -144,7 +144,7 @@ def cmd_serve(args) -> int:
 
 
 def main(argv=None) -> int:
-    p = argparse.ArgumentParser(prog="poordjaevin", description="the poor man's Jev")
+    p = argparse.ArgumentParser(prog="poordjaevin", description="a local-first decision layer")
     sub = p.add_subparsers(dest="command", required=True)
 
     pe = sub.add_parser("eval", help="score the eval set (accuracy + calibration)")

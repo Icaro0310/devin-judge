@@ -1,4 +1,4 @@
-"""Ollama logprobs backend: Jev-style single-token scoring over a local model.
+"""Ollama logprobs backend: single-token scoring over a local model.
 
 Implements the same ``entail_probs(pairs) -> list[float]`` contract as the NLI
 backend, but instead of a forward pass through a classifier it asks a local

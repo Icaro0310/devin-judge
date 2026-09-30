@@ -1,6 +1,6 @@
 """M1 invariant tests: schema validity is structural.
 
-The headline claim of poordjaevin is Jev's "0 type errors", made honest: no matter
+The headline claim of poordjaevin is the upstream "0 type errors" claim, made honest: no matter
 what a backend feeds a primitive, the answer's ``value`` is always drawn from
 the declared set and the probabilities always form a valid distribution. These
 tests hammer ``decide`` with adversarial score vectors (NaN, inf, negatives,

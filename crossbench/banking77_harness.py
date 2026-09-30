@@ -139,7 +139,7 @@ def run_von(items, labels):
 
 
 def run_djaevin(items, labels):
-    from djaevin_client import JevClient
+    from typesafe_client import JevClient
 
     client = JevClient()
     criteria = {l: l for l in labels}

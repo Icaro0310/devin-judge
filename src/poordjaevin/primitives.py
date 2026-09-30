@@ -4,7 +4,7 @@ This module is the contract. A backend's only job is to hand each primitive a
 vector of raw scores; the primitive turns that into a typed answer whose
 ``value`` is *always* drawn from the declared set. Schema validity is therefore
 structural: an out-of-set answer is impossible by construction, not by parsing
-or by hope. That is the honest version of Jev's "0 type errors" claim, and the
+or by hope. That is the honest version of the upstream "0 type errors" claim, and the
 invariant tests in ``tests/test_primitives.py`` assert it against adversarial
 inputs (negatives, NaN, inf, wrong length, all-zero).
 
@@ -237,7 +237,7 @@ class Score:
 class Noul:
     """A yes/no judgement about a statement, answered with a calibrated P(true).
 
-    Named after Jev's ``Noul`` primitive. Backends supply a single raw score for
+    Named after the upstream ``Noul`` primitive. Backends supply a single raw score for
     "true"; ``decide`` turns it into P(true) and thresholds it to a bool.
     """
 

@@ -7,7 +7,7 @@ One small natural-language-inference model does all three primitives by scoring
 - Choice -> score each option as a hypothesis, softmax across options.
 - Score  -> same, over the ordered levels.
 
-Why NLI and not a sampled LLM: it is one forward pass (Jev's speed ballpark, not
+Why NLI and not a sampled LLM: it is one forward pass (NLI speed ballpark, not
 seconds), it is fully local and offline after a one-time ~400MB download, and its
 softmax output is a real probability we can calibrate directly, no sampling tax.
 It is not the smartest option; that is the point of the optional [llm] backend.

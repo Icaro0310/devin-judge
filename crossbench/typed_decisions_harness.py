@@ -103,7 +103,7 @@ def run_von(tasks):
 
 
 def run_djaevin(tasks):
-    from djaevin_client import JevClient
+    from typesafe_client import JevClient
 
     client = JevClient()
     records, latencies = [], []
