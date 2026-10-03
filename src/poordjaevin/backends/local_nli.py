@@ -31,6 +31,8 @@ class LocalNLIBackend:
     future backend can reuse the same orchestration.
     """
 
+    confidence_source = "local_nli"
+
     def __init__(self, model_name: str = DEFAULT_MODEL, device: str | None = None,
                  batch_size: int = 16, max_length: int = 512):
         self.model_name = model_name

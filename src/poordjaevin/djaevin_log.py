@@ -13,14 +13,16 @@ Camada dos Niveis 1 e 2 do plano de melhoria no caso de uso legitimo
 Nada aqui bloqueia, forca ou decide: a camada observa e sugere. Falhas da DB
 sao fail-open — um problema de log nunca impede uma decisao de ser devolvida.
 
-Config: POORDJAEVIN_LOG_DB (caminho do ficheiro; default = raiz do projeto).
+Config: POORDJAEVIN_LOG_DB (caminho opcional do ficheiro; por omissão usa o diretório de dados do utilizador).
 """
 
 from __future__ import annotations
 
 import os
 import sqlite3
+import sys
 from datetime import datetime, timezone
+from pathlib import Path
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS djaevin_decisions (
@@ -50,19 +52,33 @@ _MIGRATIONS = [
 ]
 
 
-def _db_path() -> str:
-    env = os.environ.get("POORDJAEVIN_LOG_DB")
-    if env:
-        return env
-    # vendor/poordjaevin/src/poordjaevin/djaevin_log.py -> 4 niveis acima = raiz do projeto
-    here = os.path.dirname(os.path.abspath(__file__))
-    for _ in range(4):
-        here = os.path.dirname(here)
-    return os.path.join(here, "djaevin_log.db")
+def _db_path(platform: str | None = None, env=None, home=None) -> str:
+    env = os.environ if env is None else env
+    override = env.get("POORDJAEVIN_LOG_DB")
+    if override:
+        return override
+    platform = platform or sys.platform
+    home = Path(home) if home is not None else Path.home()
+    if platform == "nt" or platform.startswith("win"):
+        base = Path(env.get("LOCALAPPDATA") or env.get("APPDATA") or home / "AppData" / "Local")
+    elif platform == "darwin":
+        base = home / "Library" / "Application Support"
+    else:
+        base = Path(env.get("XDG_DATA_HOME") or home / ".local" / "share")
+    return str(base / "poordjaevin" / "djaevin_log.db")
 
 
 def _connect() -> sqlite3.Connection:
-    con = sqlite3.connect(_db_path())
+    db_path = _db_path()
+    default_path = not os.environ.get("POORDJAEVIN_LOG_DB")
+    if db_path != ":memory:":
+        parent = Path(db_path).expanduser().parent
+        parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        if default_path and os.name != "nt":
+            os.chmod(parent, 0o700)
+    con = sqlite3.connect(db_path)
+    if default_path and os.name != "nt" and db_path != ":memory:":
+        os.chmod(db_path, 0o600)
     con.executescript(_SCHEMA)
     for stmt in _MIGRATIONS:
         try:
@@ -78,7 +94,7 @@ def log_decision(tool: str, input_text: str, choice: str,
                  cost: float | None = None) -> int | None:
     """Insert one decision row; return its id (None when the log fails —
     fail-open, the decision itself already went out). `model`/`cost` alimentam
-    o monitor de quota (backend ACP); ficam NULL no backend Ollama."""
+    o monitor de quota (backend ACP); ficam NULL no backend local NLI."""
     try:
         with _connect() as con:
             cur = con.execute(
@@ -190,7 +206,7 @@ def calibrate(current_threshold) -> dict:
 
 def usage_summary() -> dict:
     """Monitor de modelo/quota: totais por modelo e por tool, a partir das
-    colunas model/cost (NULL no backend Ollama — so ACP mede custo)."""
+    colunas model/cost (NULL no backend local NLI — so ACP mede custo)."""
     try:
         with _connect() as con:
             per_model = con.execute(

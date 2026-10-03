@@ -3,6 +3,7 @@ Jaccard few-shot retrieval, and the calibrate report. Stdlib only — no
 model, no server, tmp DB per test."""
 
 import pytest
+from pathlib import Path
 
 from poordjaevin import djaevin_log
 
@@ -11,6 +12,28 @@ from poordjaevin import djaevin_log
 def db(tmp_path, monkeypatch):
     monkeypatch.setenv("POORDJAEVIN_LOG_DB", str(tmp_path / "djaevin_log.db"))
     return tmp_path / "djaevin_log.db"
+
+
+def test_default_log_path_uses_xdg_data_home(tmp_path):
+    path = djaevin_log._db_path(
+        platform="linux", env={"XDG_DATA_HOME": str(tmp_path)}, home=tmp_path
+    )
+    assert Path(path) == tmp_path / "poordjaevin" / "djaevin_log.db"
+
+
+def test_windows_log_path_uses_local_app_data(tmp_path):
+    path = djaevin_log._db_path(
+        platform="win32", env={"LOCALAPPDATA": "C:/Users/Test/AppData/Local"}, home=tmp_path
+    )
+    assert path.replace("\\", "/").startswith("C:/Users/Test/AppData/Local/")
+    assert path.replace("\\", "/").endswith("/poordjaevin/djaevin_log.db")
+
+
+def test_log_path_override_wins(tmp_path):
+    custom = tmp_path / "custom.db"
+    assert djaevin_log._db_path(
+        platform="linux", env={"POORDJAEVIN_LOG_DB": str(custom)}, home=tmp_path
+    ) == str(custom)
 
 
 def test_log_decision_creates_db_and_returns_id(db):

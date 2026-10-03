@@ -1,5 +1,5 @@
-"""poordjaevin as an MCP server: a fast, local, calibrated decision layer that any
-MCP client (Claude Code, Claude Desktop) can call as tools.
+"""poordjaevin as an MCP server: a fast, calibrated decision layer that any
+MCP client (Devin, Claude Code, Claude Desktop) can call as tools.
 
 The point: an agent that wants to gate a tool call, route a request, or classify
 an input should not pay an LLM round trip and token cost for a decision, and
@@ -24,6 +24,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import sys
 
 from .client import Client
 from .primitives import Choice, Score, Noul
@@ -113,14 +114,9 @@ def _levels(scale) -> "list[str] | dict":
     return levels if levels else _err(ValueError("scale must not be empty"))
 
 
-def load_calibration(calibrator_path: str | None) -> dict[str, float]:
-    """Load serving calibration.
-
-    `temperature` (calibracao de confianca) e do Djævin original e fica sempre
-    ativa. `abstain_threshold` so e aplicado quando POORDJAEVIN_ABSTAIN=on; por
-    omissao e 0.0, ou seja as tools respondem sempre em vez de absterem.
-    """
-    defaults = {"temperature": 1.0, "abstain_threshold": 0.0}
+def load_calibration(calibrator_path: str | None) -> dict[str, object]:
+    """Load backend-specific temperature calibration; abstention is opt-in."""
+    defaults = {"temperature": 1.0, "abstain_threshold": 0.0, "backend": None}
     if not calibrator_path or not os.path.exists(calibrator_path):
         return defaults
     try:
@@ -128,13 +124,16 @@ def load_calibration(calibrator_path: str | None) -> dict[str, float]:
             saved = json.load(f)
         temperature = float(saved.get("temperature", 1.0))
         threshold = float(saved.get("abstain_threshold", 0.0))
+        backend = saved.get("backend", "local_nli")
         if not 0.0 < temperature < float("inf"):
             temperature = 1.0
         if not 0.0 <= threshold <= 1.01:
             threshold = 0.0
         if not ABSTAIN_ENABLED:
             threshold = 0.0
-        return {"temperature": temperature, "abstain_threshold": threshold}
+        if backend not in ("local_nli", "logprobs", "self_report"):
+            backend = "unknown"
+        return {"temperature": temperature, "abstain_threshold": threshold, "backend": backend}
     except (ValueError, OSError, TypeError):
         return defaults
 
@@ -264,48 +263,54 @@ def _make_app(name: str):
 def _select_backend():
     """Pick the scoring backend via POORDJAEVIN_BACKEND env var.
 
-    "ollama" (default) uses the local Ollama server with first-token logprobs —
-    no model download, no torch. "nli" falls back to the original local NLI
-    backend, which lazily needs the 'local' extra (torch + transformers).
+    "acp" (default) scores through Devin's own ACP session — the model already
+    available to the Devin CLI, with automatic rotation, no extra install and
+    no API key beyond the Devin credentials. "nli" uses the fully offline
+    local NLI backend, which lazily needs the 'local' extra
+    (torch + transformers, ~400MB model download on first run).
     """
-    name = os.environ.get("POORDJAEVIN_BACKEND", "ollama").lower()
-    if name == "ollama":
-        from .backends.ollama_logits import OllamaLogitsBackend
-        return OllamaLogitsBackend()
+    name = os.environ.get("POORDJAEVIN_BACKEND", "acp").lower()
     if name == "acp":
         from .backends.acp_devin import AcpDevinBackend
         return AcpDevinBackend()
     if name == "nli":
         return None  # Client lazily builds LocalNLIBackend
     raise ValueError(
-        f"unknown POORDJAEVIN_BACKEND: {name!r} (expected 'ollama', 'acp' or 'nli')")
+        f"unknown POORDJAEVIN_BACKEND: {name!r} (expected 'acp' or 'nli')")
 
 
 def build_client(calibrator_path: str | None = "calibration.json", backend=None) -> Client:
     calibration = load_calibration(calibrator_path)
     selected_backend = backend if backend is not None else _select_backend()
+    source = "local_nli" if selected_backend is None else getattr(
+        selected_backend, "confidence_source", "unknown")
+    if calibration["backend"] and calibration["backend"] != source:
+        print(
+            f"Calibration backend {calibration['backend']} does not match {source}; using raw confidence.",
+            file=sys.stderr,
+        )
+        temperature = 1.0
+        abstain_threshold = 0.0
+    else:
+        temperature = calibration["temperature"]
+        abstain_threshold = calibration["abstain_threshold"]
     return Client(
         backend=selected_backend,
-        temperature=calibration["temperature"],
-        abstain_threshold=calibration["abstain_threshold"],
+        temperature=temperature,
+        abstain_threshold=abstain_threshold,
     )
 
 
 def build_server(calibrator_path: str | None = "calibration.json"):
-    # Warmup eager no arranque removido: existia porque o hook spawnava um
-    # servidor por chamada e pagava cold load. Numa sessao normal o servidor
-    # arranca uma vez, portanto e desnecessario. O metodo continua disponivel em
-    # OllamaLogitsBackend.warmup() para reativar:
-    #   threading.Thread(target=client._backend.warmup, daemon=True).start()
     client = build_client(calibrator_path)
     server = _make_app("poordjaevin")
-    # Proveniencia da confianca: "logprobs" (ollama/nli) ou "self_report"
-    # (acp) — o campo nunca finge ser probabilidade calibrada quando nao e.
+    # Proveniencia da confianca: "local_nli" ou "self_report" (acp) — o campo
+    # nunca finge ser probabilidade calibrada quando nao e.
     confidence_source = getattr(
-        client._backend, "confidence_source", "logprobs")
+        client._backend, "confidence_source", "local_nli")
 
     # Monitor de quota: o backend ACP expoe last_cost/model por turno; no
-    # Ollama ficam None e os campos saem como dados (NULL no log).
+    # backend local ficam None e os campos saem como dados (NULL no log).
     def _usage_fields() -> dict:
         backend = client._backend
         return {

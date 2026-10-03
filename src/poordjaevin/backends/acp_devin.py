@@ -11,17 +11,20 @@ server process and dies with it. No watchdog, no port, no scheduler — just a
 stdio child exactly like this MCP server is to Devin.
 
 Env:
-    POORDJAEVIN_ACP_BRIDGE   path to djaevin-acp-bridge.mjs
-                         (default: <project root>/scripts/djaevin-acp-bridge.mjs)
-    POORDJAEVIN_ACP_NODE     node binary (default: "node")
+    POORDJAEVIN_ACP_BRIDGE   bridge script override (default: packaged resource)
+    POORDJAEVIN_ACP_NODE     Node executable (default: "node")
+    DEVIN_CLI_PATH           Devin CLI executable (default: "devin"/"devin.exe")
+    DEVIN_CREDENTIALS_PATH   credentials.toml override
     POORDJAEVIN_ACP_TIMEOUT  seconds per ACP turn (default 120)
     POORDJAEVIN_ACP_MODEL    model value to select in the session (optional)
+    POORDJAEVIN_ACP_MAX_COST per-turn cost ceiling; unset means monitor-only
 
 Stdlib only. The bridge and the model are the moving parts, not this file.
 """
 
 from __future__ import annotations
 
+import atexit
 import json
 import math
 import os
@@ -29,16 +32,32 @@ import subprocess
 import threading
 import time
 
-def _project_root() -> str:
-    # vendor/poordjaevin/src/poordjaevin/backends/acp_devin.py -> 5 niveis = raiz
-    here = os.path.dirname(os.path.abspath(__file__))
-    for _ in range(5):
-        here = os.path.dirname(here)
-    return here
-
-
 def _default_bridge() -> str:
-    return os.path.join(_project_root(), "scripts", "djaevin-acp-bridge.mjs")
+    package_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(package_root, "scripts", "djaevin-acp-bridge.mjs")
+
+
+def _terminate_process(proc: subprocess.Popen | None) -> None:
+    if proc is None:
+        return
+    try:
+        if proc.stdin:
+            proc.stdin.close()
+    except (OSError, ValueError):
+        pass
+    if proc.poll() is None:
+        try:
+            proc.terminate()
+        except OSError:
+            return
+        try:
+            proc.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            try:
+                proc.kill()
+                proc.wait(timeout=2)
+            except OSError:
+                pass
 
 
 class AcpDevinBackend:
@@ -51,9 +70,9 @@ class AcpDevinBackend:
         self.bridge = bridge or os.environ.get("POORDJAEVIN_ACP_BRIDGE") \
             or _default_bridge()
         self.node = node or os.environ.get("POORDJAEVIN_ACP_NODE", "node")
-        self.cwd = cwd or _project_root()
-        self.timeout = timeout or float(
-            os.environ.get("POORDJAEVIN_ACP_TIMEOUT", "120")) * 1000 / 1000
+        self.cwd = cwd or os.getcwd()
+        self.timeout = timeout if timeout is not None else float(
+            os.environ.get("POORDJAEVIN_ACP_TIMEOUT", "120"))
         self._lock = threading.Lock()
         self._cond = threading.Condition(self._lock)
         self._proc: subprocess.Popen | None = None
@@ -68,6 +87,7 @@ class AcpDevinBackend:
         # Com qualquer teto >= 0, custo desconhecido falha fechado antes de
         # devolver scores; zero explicito passa e custos acima do teto abortam.
         self.max_cost = float(os.environ.get("POORDJAEVIN_ACP_MAX_COST", "-1"))
+        atexit.register(self.close)
 
     # -- child process -------------------------------------------------- #
 
@@ -76,17 +96,18 @@ class AcpDevinBackend:
             return
         if not os.path.exists(self.bridge):
             raise FileNotFoundError(f"ACP bridge not found: {self.bridge}")
-        self._proc = subprocess.Popen(
+        proc = subprocess.Popen(
             [self.node, self.bridge],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
             text=True, cwd=self.cwd)
+        self._proc = proc
         self._responses = {}
-        threading.Thread(target=self._read_loop, daemon=True).start()
+        threading.Thread(target=self._read_loop, args=(proc,), daemon=True).start()
 
-    def _read_loop(self) -> None:
-        assert self._proc is not None and self._proc.stdout is not None
-        for line in self._proc.stdout:
+    def _read_loop(self, proc: subprocess.Popen) -> None:
+        assert proc.stdout is not None
+        for line in proc.stdout:
             line = line.strip()
             if not line.startswith("{"):
                 continue
@@ -96,35 +117,58 @@ class AcpDevinBackend:
                 continue
             if "id" in msg:
                 with self._cond:
+                    if self._proc is not proc:
+                        continue
                     self._responses[msg["id"]] = msg
                     self._cond.notify_all()
+        with self._cond:
+            if self._proc is proc:
+                self._proc = None
+                self._cond.notify_all()
 
     def _request(self, payload: dict, timeout: float | None = None) -> dict:
         """Send one request, wait for the matching-id response."""
         timeout = timeout or self.timeout
         with self._cond:
             self._ensure_proc()
+            proc = self._proc
             self._id += 1
             mid = self._id
-            assert self._proc is not None and self._proc.stdin is not None
+            assert proc is not None and proc.stdin is not None
             try:
-                self._proc.stdin.write(
+                proc.stdin.write(
                     json.dumps({**payload, "id": mid}) + "\n")
-                self._proc.stdin.flush()
+                proc.stdin.flush()
             except (BrokenPipeError, OSError) as error:
                 self._proc = None
-                raise RuntimeError(f"ACP bridge died: {error}") from error
+                self._responses.clear()
+                _terminate_process(proc)
+                raise RuntimeError("ACP bridge process ended") from error
             deadline = time.monotonic() + timeout
             while mid not in self._responses:
+                if proc.poll() is not None or self._proc is not proc:
+                    self._proc = None
+                    self._responses.clear()
+                    raise RuntimeError("ACP bridge process ended")
                 remaining = deadline - time.monotonic()
                 if remaining <= 0:
                     self._proc = None  # respawn limpo na proxima chamada
+                    self._responses.clear()
+                    _terminate_process(proc)
                     raise TimeoutError(f"ACP bridge timeout {timeout}s")
                 self._cond.wait(remaining)
             msg = self._responses.pop(mid)
         if "error" in msg:
             raise RuntimeError(msg["error"])
         return msg
+
+    def close(self) -> None:
+        with self._cond:
+            proc = self._proc
+            self._proc = None
+            self._responses.clear()
+            self._cond.notify_all()
+        _terminate_process(proc)
 
     # -- poordjaevin backend contract --------------------------------------- #
 

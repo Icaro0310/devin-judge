@@ -1,7 +1,6 @@
-"""Unit tests for the Devin ACP backend using a deterministic fake bridge.
-No model or credentials are used; subprocess, protocol, and cost telemetry are
-exercised synthetically."""
+"""Unit tests use fake ACP processes and synthetic credentials; no Devin session or model is accessed."""
 
+import json
 import os
 import shutil
 
@@ -11,15 +10,49 @@ from poordjaevin.backends.acp_devin import AcpDevinBackend
 
 FIXTURE = os.path.join(os.path.dirname(__file__),
                        "fixtures", "fake_acp_bridge.mjs")
+FAKE_DEVIN_CLI = os.path.join(os.path.dirname(__file__),
+                              "fixtures", "fake_devin_cli.mjs")
 pytestmark = pytest.mark.skipif(
-    shutil.which("node") is None or not os.path.exists(FIXTURE),
-    reason="node or fake bridge fixture unavailable")
+    shutil.which("node") is None or not os.path.exists(FIXTURE) or not os.path.exists(FAKE_DEVIN_CLI),
+    reason="node or ACP bridge fixture unavailable")
 
 
 @pytest.fixture
 def backend(tmp_path, monkeypatch):
     monkeypatch.delenv("POORDJAEVIN_ACP_MAX_COST", raising=False)
-    return AcpDevinBackend(bridge=FIXTURE, cwd=str(tmp_path), timeout=30)
+    instance = AcpDevinBackend(bridge=FIXTURE, cwd=str(tmp_path), timeout=30)
+    yield instance
+    instance.close()
+
+
+def test_default_bridge_is_packaged():
+    from poordjaevin.backends.acp_devin import _default_bridge
+
+    assert os.path.isfile(_default_bridge())
+
+
+def test_packaged_bridge_uses_devin_acp_with_synthetic_credentials(tmp_path, monkeypatch):
+    from poordjaevin.backends.acp_devin import AcpDevinBackend
+
+    node = shutil.which("node")
+    credentials = tmp_path / "credentials.toml"
+    credentials.write_text('windsurf_api_key = "synthetic-session-token"\n')
+    monkeypatch.setenv("DEVIN_CLI_PATH", node)
+    monkeypatch.setenv("DEVIN_CREDENTIALS_PATH", str(credentials))
+    monkeypatch.setenv("POORDJAEVIN_ACP_NODE", node)
+    monkeypatch.setenv("POORDJAEVIN_ACP_DEVIN_ARGS", json.dumps([FAKE_DEVIN_CLI]))
+    monkeypatch.setenv("POORDJAEVIN_ACP_TIMEOUT", "10")
+    monkeypatch.delenv("POORDJAEVIN_ACP_BRIDGE", raising=False)
+    monkeypatch.delenv("POORDJAEVIN_ACP_MODEL", raising=False)
+    monkeypatch.delenv("POORDJAEVIN_ACP_MAX_COST", raising=False)
+
+    backend = AcpDevinBackend(cwd=str(tmp_path), timeout=10)
+    try:
+        assert backend.entail_probs([("premise 1", "hypothesis 1"), ("premise 2", "hypothesis 2")]) == [0.5, 0.75]
+        assert backend.model == "fake-model"
+        assert backend.last_cost == 0.0
+    finally:
+        backend.close()
 
 
 def test_entail_probs_returns_unit_interval(backend):

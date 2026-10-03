@@ -171,7 +171,7 @@ def main(argv=None) -> int:
     pc.add_argument("--out", default="calibration.json")
     pc.set_defaults(func=cmd_calibrate)
 
-    ps = sub.add_parser("serve", help="run the MCP server (for Claude Code etc.)")
+    ps = sub.add_parser("serve", help="run the MCP server (for Devin, Claude Code etc.)")
     ps.add_argument("--calibrator", default="calibration.json",
                     help="calibration.json to apply (fitted temperature)")
     ps.set_defaults(func=cmd_serve)

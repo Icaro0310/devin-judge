@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "poordjaevin"
 version = "0.1.0"
-description = "A local-first System One decision layer with provably calibrated confidence. Fork renamed from poorjev to avoid collision with the existing 'Jev' name."
+description = "A local-first typed decision layer with calibrated confidence, including an optional Devin ACP backend."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
@@ -35,10 +35,14 @@ dev = ["pytest>=8.0", "pytest-cov>=5.0"]
 poordjaevin = "poordjaevin.cli:main"
 
 [project.urls]
+Source = "https://github.com/Icaro0310/poordjaevin"
 Upstream = "https://github.com/rupeshpoojary9/poorjev"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/poordjaevin"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/poordjaevin/scripts/djaevin-acp-bridge.mjs" = "poordjaevin/scripts/djaevin-acp-bridge.mjs"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
