@@ -149,6 +149,24 @@ no benchmark multi-primitivo, mas `von` vence em classificação de alta
 cardinalidade e Jev vence no geral. Sem hype: os números são reproduzíveis e
 as limitações estão documentadas no README em inglês.
 
+## FAQ
+
+**Isto é um clone do Jev?** Não. Reproduz a interface de developer do Jev e a sua garantia de confiança calibrada em modelos abertos e locais. Não copia a arquitetura do Jev nem a sua velocidade.
+
+**Posso correr o Jev localmente?** O Jev em si não, é fechado e hospedado. O poordjaevin é a alternativa local e open-source: corre a mesma interface de decisões tipadas na sua própria máquina, offline, sem API key e sem waitlist.
+
+**Existe uma alternativa open-source ao Jev?** Sim, esta é uma. O poordjaevin é MIT-licensed, reproduz a interface `Choice`/`Score`/`Noul` do Jev em modelos commodity, e prova a sua calibração com números reproduzíveis.
+
+**Preciso de uma API key ou GPU?** Não. Dois caminhos gratuitos: `serve` usa por defeito o backend ACP, que reutiliza as tuas credenciais e modelo Devin existentes; `nli` corre em CPU, offline, depois de um download de modelo.
+
+**Como é diferente de um LLM em modo JSON?** De duas formas. O output é válido por construção, não por parsing. E a confiança é calibrada e provada, não um número que o modelo inventou.
+
+**O que é um modelo "System One"?** Um modelo para decisões rápidas, automáticas e estruturadas (classificar, rotear, pontuar, fazer gate), em contraste com chat lento e deliberativo. O nome vem do Sistema 1 / Sistema 2 de Kahneman.
+
+**O que é ECE?** Expected Calibration Error: a diferença média entre a confiança de um modelo e a sua acurácia real. Quanto mais baixo, melhor. O trabalho inteiro do poordjaevin é encolhê-lo.
+
+**Posso usar o meu próprio modelo?** Sim. Os backends são plugáveis; um backend só implementa `entail_probs(pairs)`.
+
 ## Licença
 
 MIT. Usa, distribui, vende.
