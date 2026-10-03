@@ -1,0 +1,32 @@
+# poordjaevin
+
+> An open source, local-first "System One" decision layer: typed questions (Choice, Score, Noul) answered with calibrated confidence, no API key required.
+
+poordjaevin solves the problem of trusting LLM confidence scores. Ask typed questions about a piece of state (pick an option, score a level, yes/no gate) and get schema-valid typed answers with measured, calibrated confidence in a single model pass. It is for developers and agent systems that need fast structured decisions (route, classify, score, gate a tool call) on local, private data, without a hosted API, waitlist, or per-token cost. Confidence is proven, not self-reported: temperature scaling plus conformal abstention cut calibration error (ECE) from 0.170 to 0.071 on the shipped eval set, reproducible with two commands. This is the Devin-ecosystem fork; the default `serve` backend scores through the Devin CLI's own model via ACP, and a fully offline local NLI backend is the fallback.
+
+## Docs
+
+- [README](https://github.com/Icaro0310/poordjaevin/blob/main/README.md): full documentation
+- [RESULTS.md](https://github.com/Icaro0310/poordjaevin/blob/main/RESULTS.md): full benchmark tables and honest limitations
+- [crossbench/](https://github.com/Icaro0310/poordjaevin/tree/main/crossbench): independent cross-system benchmark vs Jev, Laya, von
+
+## Key commands
+
+- `pip install "poordjaevin[local] @ git+https://github.com/Icaro0310/poordjaevin.git"`: install with the offline NLI backend (torch + transformers)
+- `pipx install "poordjaevin[mcp] @ git+https://github.com/Icaro0310/poordjaevin.git"`: install for MCP use with Devin or Claude Code
+- `poordjaevin eval --set evalset/tasks.jsonl`: accuracy, ECE, Brier, risk-coverage on the eval set
+- `poordjaevin calibrate --set evalset/tasks.jsonl --plots`: fit temperature, print before/after ECE, render diagrams
+- `poordjaevin serve`: run the MCP server over stdio (tools: gate, judge, classify, rate, decide)
+- `poordjaevin ask`: ask typed questions from the CLI
+- `pytest -q`: test suite, no model download and no key needed
+
+## When to use / when not
+
+- Use when: you need schema-valid typed decisions (classification, routing, ordinal scoring, yes/no guardrails) with honest confidence; your data cannot leave the machine; you want zero marginal cost per decision; you need an agent to gate a risky tool call before running it; you want abstention ("escalate to a human/bigger model") under a risk budget.
+- Not when: you need the best raw accuracy on high-cardinality classification (the `von` backend leads Banking77 among open options; poordjaevin is weak there, ECE 0.414); you need Jev-level speed or deep reasoning (commodity NLI model, moderate intelligence); you ask abstract questions like "is this dangerous" (ask concrete ones like "does this move money"); a hosted API is acceptable and you want the strongest measured system (that is Jev).
+
+## Related
+
+- [devin-ecosystem](https://icaro0310.github.io/): the 20+ tool ecosystem this belongs to
+- [devin-internals-spec](https://github.com/Icaro0310/devin-internals-spec): schema notes for Devin's local stores
+- [rupeshpoojary9/poordjaevin](https://github.com/rupeshpoojary9/poordjaevin): upstream project this fork extends with the Devin ACP backend

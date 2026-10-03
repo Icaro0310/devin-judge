@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: poordjaevin
+authors:
+  - family-names: Galvao
+    given-names: Icaro
+url: "https://github.com/Icaro0310/poordjaevin"
+repository-code: "https://github.com/Icaro0310/poordjaevin"
+license: MIT
+abstract: "A local-first typed decision layer with provably calibrated confidence: Choice/Score/Noul primitives, an offline NLI backend, a Devin ACP backend, and an MCP server mode."
+keywords: [calibration, decision-making, llm, mcp-server, nli, structured-output]
