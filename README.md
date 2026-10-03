@@ -2,6 +2,9 @@
 
 <img src="assets/banner.svg" alt="poordjaevin" width="100%"/>
 
+<a href="https://github.com/Icaro0310/poordjaevin/actions/workflows/tests.yml"><img src="https://github.com/Icaro0310/poordjaevin/actions/workflows/tests.yml/badge.svg" alt="tests"/></a>
+
+
 </div>
 
 <h1 align="center">poordjaevin</h1>
