@@ -345,3 +345,8 @@ MIT. Use it, ship it, sell it.
 ---
 
 <p align="center"><i>poordjaevin: poor in price, rich in honesty. If your model's confidence is a vibe, come check it.</i></p>
+
+
+---
+
+If this saved you debugging time, a ⭐ on the repo helps others find it.

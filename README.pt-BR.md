@@ -152,3 +152,8 @@ as limitações estão documentadas no README em inglês.
 ## Licença
 
 MIT. Usa, distribui, vende.
+
+
+---
+
+Se isso te poupou tempo de depuração, uma ⭐ no repositório ajuda outras pessoas a encontrá-lo.
