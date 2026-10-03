@@ -1,3 +1,9 @@
+<div align="center">
+
+<img src="assets/banner.svg" alt="poordjaevin" width="100%"/>
+
+</div>
+
 <h1 align="center">poordjaevin</h1>
 
 <p align="center"><b>O Jev do pobre.</b> Uma camada de decisão "Sistema Um" open source e local-first para apps de LLM: decisões tipadas com <b>confiança calibrada e comprovada</b>. Sem API key. Sem waitlist.</p>

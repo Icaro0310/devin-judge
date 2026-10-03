@@ -1,0 +1,23 @@
+<svg width="1200" height="240" viewBox="0 0 1200 240" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="orb1" cx="50%" cy="50%" r="50%"><stop offset="0%" class="o1a"/><stop offset="100%" class="o1b"/></radialGradient>
+    <radialGradient id="orb2" cx="50%" cy="50%" r="50%"><stop offset="0%" class="o2a"/><stop offset="100%" class="o2b"/></radialGradient>
+    <style>
+      .bg{fill:#fbfbfd}
+      .o1a{stop-color:#0071e3;stop-opacity:.14}.o1b{stop-color:#0071e3;stop-opacity:0}
+      .o2a{stop-color:#bf5af2;stop-opacity:.09}.o2b{stop-color:#bf5af2;stop-opacity:0}
+      .t{fill:#1d1d1f;font:650 76px -apple-system,'SF Pro Display','Segoe UI','Helvetica Neue',Arial,sans-serif;letter-spacing:-3px}
+      .a{fill:#0071e3}
+      .s{fill:#6e6e73;font:400 25px -apple-system,'SF Pro Text','Segoe UI','Helvetica Neue',Arial,sans-serif;letter-spacing:-.3px}
+      @media (prefers-color-scheme:dark){
+        .bg{fill:#000}.o1a{stop-opacity:.24}.o2a{stop-opacity:.16}
+        .t{fill:#f5f5f7}.a{fill:#2997ff}.s{fill:#a1a1a6}
+      }
+    </style>
+  </defs>
+  <rect class="bg" width="1200" height="240"/>
+  <circle cx="1010" cy="50" r="190" fill="url(#orb1)"/>
+  <circle cx="170" cy="230" r="170" fill="url(#orb2)"/>
+  <text x="600" y="118" text-anchor="middle" class="t">poordjaevin<tspan class="a"> · djævin</tspan></text>
+  <text x="600" y="168" text-anchor="middle" class="s">Calibrated decisions for agents</text>
+</svg>

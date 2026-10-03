@@ -1,3 +1,9 @@
+<div align="center">
+
+<img src="assets/banner.svg" alt="poordjaevin" width="100%"/>
+
+</div>
+
 <h1 align="center">poordjaevin</h1>
 
 <p align="center"><b>The poor man's Jev.</b> An open source, local-first "System One" decision layer for LLM apps: typed decisions with <b>provably calibrated confidence</b>. No API key. No waitlist.</p>
