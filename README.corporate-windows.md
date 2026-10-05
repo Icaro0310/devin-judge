@@ -1,8 +1,8 @@
-# poordjaevin — Personal Windows guide
+# poordjaevin — Corporate Windows guide
 
-This guide covers unrestricted Windows setup. For restricted machines, see [README.corporate-windows.md](README.corporate-windows.md); for features, shared commands, limitations, and the safety model, see [README.md](README.md).
+This guide covers restricted Windows setup only. For unrestricted Windows, see [README.windows.md](README.windows.md); for features, shared commands, limitations, and the safety model, see [README.md](README.md).
 
-Personal Windows uses the extended runtime: local execution plus optional Devin VM/QwenPaw delegation when this artifact supports it.
+Corporate Windows is a local-only environment: no Devin VM, QwenPaw, Slack dependency, external compute, workload delegation or required external integration.
 
 ## Prerequisites
 
@@ -23,8 +23,8 @@ Use the tool's documented `--data-dir` or `--config-dir` flags for non-default l
 
 ## Environment notes
 
-- Delegated runtime is optional; this guide installs local tooling only.
-- Corporate Windows is a separate local-only environment.
+- Keep execution local; do not configure VM, QwenPaw, external compute or workload delegation.
+- Registry-declared external integrations remain optional and are not installed by this guide.
 - macOS is planned but not claimed as tested.
 
 ## Troubleshooting
