@@ -44,6 +44,8 @@ Not on PyPI yet. Install from GitHub:
 
 ```bash
 # Linux / macOS
+
+**[Windows](README.windows.md)** · **[Linux](README.linux.md)** · English
 pip install "poordjaevin[local] @ git+https://github.com/Icaro0310/poordjaevin.git"
 ```
 
