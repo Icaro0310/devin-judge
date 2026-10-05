@@ -18,6 +18,12 @@
   <img src="https://img.shields.io/badge/API%20key-not%20required-blueviolet" alt="no API key required">
 </p>
 
+<p align="center"><sub>Community project. Not affiliated with, endorsed by, or sponsored by Cognition AI. "Devin" is a trademark of Cognition AI.</sub></p>
+
+**[Linux](README.linux.md)** · **[Personal Windows](README.windows.md)** · **[Corporate Windows](README.corporate-windows.md)**
+
+Part of the [awesome-devin](https://github.com/Icaro0310/awesome-devin) ecosystem: the curated hub for the devin-* tools.
+
 > **Fork note:** this is the Devin-ecosystem fork of
 > [rupeshpoojary9/poordjaevin](https://github.com/rupeshpoojary9/poordjaevin).
 > It adds a **Devin ACP backend**: `poordjaevin serve` scores through the model
@@ -44,8 +50,6 @@ Not on PyPI yet. Install from GitHub:
 
 ```bash
 # Linux / macOS
-
-**[Linux](README.linux.md)** · **[Personal Windows](README.windows.md)** · **[Corporate Windows](README.corporate-windows.md)**
 pip install "poordjaevin[local] @ git+https://github.com/Icaro0310/poordjaevin.git"
 ```
 
