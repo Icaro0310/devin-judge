@@ -54,22 +54,21 @@ Every LLM-in-JSON-mode hands you a confidence score and hopes you don't check it
 
 ## Quickstart
 
-Not on PyPI yet. Install from GitHub:
-
 ```bash
 # Linux / macOS
-pip install "poordjaevin[local] @ git+https://github.com/Icaro0310/poordjaevin.git"
+pip install "poordjaevin[local]"
 ```
 
 ```powershell
 # Windows (PowerShell)
-py -m pip install "poordjaevin[local] @ git+https://github.com/Icaro0310/poordjaevin.git"
+py -m pip install "poordjaevin[local]"
 ```
 
 `[local]` pulls torch + transformers for the offline NLI backend. If you only
 plan to use the Devin ACP backend (`poordjaevin serve` default), a plain
-`pip install "poordjaevin @ git+https://github.com/Icaro0310/poordjaevin.git"`
-is enough.
+`pip install poordjaevin` is enough. To install the development version
+straight from GitHub, append `@ git+https://github.com/Icaro0310/poordjaevin.git`
+to the package spec.
 
 ```python
 from poordjaevin import Client, Choice, Score, Noul
@@ -111,7 +110,7 @@ No Ollama, no VM, no tunnel, no second API key: the bridge reads the same
 
 ```bash
 # Devin users: no local model needed
-pipx install "poordjaevin[mcp] @ git+https://github.com/Icaro0310/poordjaevin.git"
+pipx install "poordjaevin[mcp]"
 ```
 
 Add it to your Devin MCP configuration:
@@ -148,7 +147,7 @@ the other, and `model`/`cost` are logged per call for quota monitoring.
 No Devin on the machine? Use the offline path:
 
 ```bash
-pipx install "poordjaevin[local,mcp] @ git+https://github.com/Icaro0310/poordjaevin.git"
+pipx install "poordjaevin[local,mcp]"
 POORDJAEVIN_BACKEND=nli poordjaevin serve   # ~400MB one-time model download, then offline
 ```
 
