@@ -1,0 +1,20 @@
+name: pr-labeler
+
+# Auto-labels pull requests by which paths they touch. Runs on
+# pull_request_target so labels also apply to PRs from forks.
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/labeler@v5
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
