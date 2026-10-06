@@ -5,6 +5,11 @@
 <a href="https://github.com/Icaro0310/poordjaevin/actions/workflows/tests.yml"><img src="https://github.com/Icaro0310/poordjaevin/actions/workflows/tests.yml/badge.svg" alt="tests"/></a>
 
 
+<a href="https://scorecard.dev/viewer/?uri=github.com/Icaro0310/poordjaevin"><img src="https://api.scorecard.dev/projects/github.com/Icaro0310/poordjaevin/badge" alt="OpenSSF Scorecard"/></a>
+<a href="https://github.com/Icaro0310/poordjaevin/stargazers"><img src="https://img.shields.io/github/stars/Icaro0310/poordjaevin" alt="GitHub stars"/></a>
+<a href="https://github.com/Icaro0310/poordjaevin/commits/main"><img src="https://img.shields.io/github/last-commit/Icaro0310/poordjaevin" alt="Last commit"/></a>
+<a href="https://github.com/Icaro0310/awesome-devin"><img src="https://img.shields.io/badge/part%20of-devin--*-ecosystem-7c3aed" alt="devin-* ecosystem"/></a>
+<a href="https://github.com/Icaro0310/poordjaevin/issues"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome"/></a>
 </div>
 
 <h1 align="center">poordjaevin</h1>
