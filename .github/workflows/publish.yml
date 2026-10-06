@@ -11,6 +11,9 @@ on:
 
 jobs:
   publish:
+    permissions:
+      contents: read
+      id-token: write  # passed through to the reusable job for OIDC
     uses: Icaro0310/devin-powerups/.github/workflows/pypi-publish.yml@main
     secrets:
       PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
