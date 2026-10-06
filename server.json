@@ -1,8 +1,8 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json",
   "name": "io.github.Icaro0310/poordjaevin",
-  "description": "Calibrated decision layer for agents — typed yes/no, score and multi-choice answers with measured confidence (ECE 0.071). Runs on Devin's own model via ACP or fully offline NLI. Local-first, no API key.",
-  "version": "0.1.0",
+  "description": "Typed answers with calibrated confidence for agents. Local-first, no API key.",
+  "version": "0.1.1",
   "repository": {
     "url": "https://github.com/Icaro0310/poordjaevin",
     "source": "github"
@@ -11,9 +11,16 @@
     {
       "registryType": "pypi",
       "identifier": "poordjaevin",
-      "version": "0.1.0",
-      "transport": { "type": "stdio" },
-      "runtimeArguments": ["serve"],
+      "version": "0.1.1",
+      "transport": {
+        "type": "stdio"
+      },
+      "runtimeArguments": [
+        {
+          "type": "positional",
+          "value": "serve"
+        }
+      ],
       "environmentVariables": [
         {
           "name": "POORDJAEVIN_BACKEND",
