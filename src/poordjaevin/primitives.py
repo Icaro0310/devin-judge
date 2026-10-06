@@ -71,6 +71,11 @@ def normalize_probs(scores: list[float]) -> list[float]:
     """
     xs = [max(0.0, x) for x in _sanitize(scores)]
     total = sum(xs)
+    if not math.isfinite(total) and xs:
+        # inputs near float max can overflow the sum to +inf; rescale by max
+        m = max(xs)
+        xs = [x / m for x in xs]
+        total = sum(xs)
     if total <= 0.0:
         n = len(xs) if xs else 1
         return [1.0 / n] * n
