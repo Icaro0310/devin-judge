@@ -94,6 +94,8 @@ One call, one model pass, four typed answers. No prompt engineering, no JSON par
 
 ## Use it with Devin (MCP server, Devin-only)
 
+<!-- mcp-name: io.github.Icaro0310/poordjaevin -->
+
 poordjaevin ships an MCP server, so Devin (or any MCP client) can make fast,
 calibrated decisions as tools. The obvious use: gate a risky tool call before
 the agent runs it.

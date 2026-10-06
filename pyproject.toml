@@ -4,12 +4,12 @@ build-backend = "hatchling.build"
 
 [project]
 name = "poordjaevin"
-version = "0.1.0"
+version = "0.1.1"
 description = "A local-first typed decision layer with calibrated confidence, including an optional Devin ACP backend."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-authors = [{ name = "Rupesh Poojary" }]
+authors = [{ name = "Icaro0310" }]
 keywords = ["llm", "classification", "calibration", "system-one", "structured-output", "conformal-prediction", "zero-shot", "guardrails", "mcp"]
 dependencies = []
 classifiers = [
