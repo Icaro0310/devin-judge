@@ -12,8 +12,8 @@ poordjaevin solves the problem of trusting LLM confidence scores. Ask typed ques
 
 ## Key commands
 
-- `pip install "poordjaevin[local] @ git+https://github.com/Icaro0310/poordjaevin.git"`: install with the offline NLI backend (torch + transformers)
-- `pipx install "poordjaevin[mcp] @ git+https://github.com/Icaro0310/poordjaevin.git"`: install for MCP use with Devin or Claude Code
+- `uv tool install "poordjaevin[local]"`: install with the offline NLI backend (torch + transformers)
+- `uv tool install "poordjaevin[mcp]"  # or: pipx install "poordjaevin[mcp]"`: install for MCP use with Devin or Claude Code
 - `poordjaevin eval --set evalset/tasks.jsonl`: accuracy, ECE, Brier, risk-coverage on the eval set
 - `poordjaevin calibrate --set evalset/tasks.jsonl --plots`: fit temperature, print before/after ECE, render diagrams
 - `poordjaevin serve`: run the MCP server over stdio (tools: gate, judge, classify, rate, decide)
