@@ -110,6 +110,9 @@ No Ollama, no VM, no tunnel, no second API key: the bridge reads the same
 
 ```bash
 # Devin users: no local model needed
+uv tool install "poordjaevin[mcp]"
+
+# or with pipx (alternative)
 pipx install "poordjaevin[mcp]"
 ```
 
@@ -147,6 +150,9 @@ the other, and `model`/`cost` are logged per call for quota monitoring.
 No Devin on the machine? Use the offline path:
 
 ```bash
+uv tool install "poordjaevin[local,mcp]"
+
+# or with pipx
 pipx install "poordjaevin[local,mcp]"
 POORDJAEVIN_BACKEND=nli poordjaevin serve   # ~400MB one-time model download, then offline
 ```
