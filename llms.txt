@@ -27,6 +27,6 @@ poordjaevin solves the problem of trusting LLM confidence scores. Ask typed ques
 
 ## Related
 
-- [devin-ecosystem](https://icaro0310.github.io/): the 20+ tool ecosystem this belongs to
+- [devin-ecosystem](https://icaro0310.github.io/): the tool ecosystem this belongs to
 - [devin-internals-spec](https://github.com/Icaro0310/devin-internals-spec): schema notes for Devin's local stores
 - [rupeshpoojary9/poordjaevin](https://github.com/rupeshpoojary9/poordjaevin): upstream project this fork extends with the Devin ACP backend
