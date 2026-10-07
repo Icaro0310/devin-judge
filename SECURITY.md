@@ -3,11 +3,11 @@
 ## What this tool does with your data
 
 - **No telemetry.** This project sends nothing to analytics or tracking.
-- **Remote judging is the point.** The `acp` backend sends the decision
-  text you submit to your configured Devin endpoint so a model can score
-  it. If you need local-only behavior, do not configure a remote backend.
-- **Data stays on your machine** unless you configure a remote backend
-  as above. Files it reads and writes are documented in the README.
+- **Remote judging is the point — and the default.** `poordjaevin serve`
+  uses the `acp` backend out of the box, which sends the decision text you
+  submit to the configured Devin endpoint so a model can score it.
+  Selecting a local backend keeps text on your machine.
+- Files it reads and writes are documented in the README.
 
 ## Sensitive data handling
 
