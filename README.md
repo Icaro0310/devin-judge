@@ -15,6 +15,14 @@
 <a href="https://github.com/Icaro0310/poordjaevin/issues"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome"/></a>
 </div>
 
+<!-- DEVIN-ECO:BEGIN -->
+> **Part of the [DEVIN ecosystem](https://github.com/Icaro0310/awesome-devin)**  
+> Track: Verify · Nature: product  
+> For: AI engineers, QA engineers  
+> Interface: CLI / Python library / MCP server / bridge
+<!-- DEVIN-ECO:END -->
+
+
 <h1 align="center">poordjaevin</h1>
 
 <p align="center"><b>The poor man's Jev.</b> An open source, local-first "System One" decision layer for LLM apps: typed decisions with <b>provably calibrated confidence</b>. No API key. No waitlist.</p>
