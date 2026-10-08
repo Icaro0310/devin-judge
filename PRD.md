@@ -7,7 +7,7 @@ probabilities) but backed by small local models or any LLM, and where the one th
 
 - **Owner:** Rupesh Poojary
 - **Date:** 2026-09-19
-- **Package / repo:** `poordjaevin` → `pip install poordjaevin` → `github.com/rupeshpoojary9/poordjaevin`
+- **Package / repo:** `poordjaevin` → `pip install poordjaevin` → `github.com/Icaro0310/poordjaevin`
   - *Name is free on PyPI + GitHub as of 2026-09-19. Backups: `poormansjev`, `poordjaevinai`.*
 - **Status:** 🔴 not started — this PRD is the build spec
 - **Lane:** LLM-evals authority (pairs with `rag-eval-benchmark`, `awesome-llm-evals`). Sister project to a future `system-one-bench`.
