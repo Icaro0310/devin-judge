@@ -32,14 +32,6 @@
 
 Part of the [awesome-devin](https://github.com/Icaro0310/awesome-devin) ecosystem: the curated hub for the devin-* tools.
 
-> **Fork note:** this is the Devin-ecosystem fork of
-> [rupeshpoojary9/poordjaevin](https://github.com/rupeshpoojary9/poordjaevin).
-> It adds a **Devin ACP backend**: `poordjaevin serve` scores through the model
-> your Devin CLI already uses, with automatic model rotation and per-call cost
-> telemetry, so Devin users need no extra model download, no Ollama, no VM, and
-> no API key beyond Devin's own credentials. The original keyless local backend
-> remains as the fully offline fallback (`POORDJAEVIN_BACKEND=nli`).
-
 ---
 
 **Your model's `0.9` is a vibe. poordjaevin's `0.9` is a measurement.**
