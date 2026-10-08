@@ -19,7 +19,8 @@
 > **Part of the [DEVIN ecosystem](https://github.com/Icaro0310/awesome-devin)**  
 > Track: Verify · Nature: product  
 > For: AI engineers, QA engineers  
-> Interface: CLI / Python library / MCP server / bridge
+> Interface: CLI / Python library / MCP server / Bridge  
+> Path: QA engineers · step 3/3 — after `devin-evals`
 <!-- DEVIN-ECO:END -->
 
 
