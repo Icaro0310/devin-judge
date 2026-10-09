@@ -9,6 +9,7 @@
 <a href="https://glama.ai/mcp/servers/Icaro0310/poordjaevin"><img src="https://img.shields.io/badge/Glama-claimed-blue" alt="Glama"/></a>
 
 <a href="https://scorecard.dev/viewer/?uri=github.com/Icaro0310/devin-judge"><img src="https://api.scorecard.dev/projects/github.com/Icaro0310/devin-judge/badge" alt="OpenSSF Scorecard"/></a>
+<a href="https://www.bestpractices.dev/projects/15336"><img src="https://www.bestpractices.dev/projects/15336/badge" alt="OpenSSF Best Practices"/></a>
 <a href="https://github.com/Icaro0310/devin-judge"><img src="https://img.shields.io/github/stars/Icaro0310/devin-judge" alt="GitHub stars"/></a>
 <a href="https://github.com/Icaro0310/devin-judge/commits/main"><img src="https://img.shields.io/github/last-commit/Icaro0310/devin-judge" alt="Last commit"/></a>
 <a href="https://github.com/Icaro0310/awesome-devin"><img src="https://img.shields.io/badge/part%20of-devin--*-ecosystem-7c3aed" alt="devin-* ecosystem"/></a>
