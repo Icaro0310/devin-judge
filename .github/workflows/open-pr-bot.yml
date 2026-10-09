@@ -1,0 +1,45 @@
+name: open-pr-bot
+
+on:
+  workflow_dispatch:
+    inputs:
+      head:
+        description: "Branch to merge (must be pushed already)"
+        required: true
+        type: string
+      base:
+        description: "Target branch"
+        required: false
+        type: string
+        default: main
+      title:
+        required: true
+        type: string
+      body:
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  open-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Open PR as github-actions[bot]
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_BRANCH: ${{ inputs.head }}
+          BASE_BRANCH: ${{ inputs.base }}
+          PR_TITLE: ${{ inputs.title }}
+          PR_BODY: ${{ inputs.body }}
+        run: |
+          set -e
+          if url=$(gh pr view "$HEAD_BRANCH" --json url -q .url 2>/dev/null); then
+            echo "PR already exists: $url"
+          else
+            gh pr create --head "$HEAD_BRANCH" --base "$BASE_BRANCH" \
+              --title "$PR_TITLE" --body "$PR_BODY"
+          fi
