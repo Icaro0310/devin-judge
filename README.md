@@ -27,7 +27,7 @@
 <!-- DEVIN-WHERE:BEGIN -->
 ## Where this fits
 
-- **Job:** Verify
+- **Job:** Control
 - **Product:** [`devin-judge`](https://github.com/Icaro0310/devin-judge)
 - **Packages:** `poordjaevin`
 - **Mode:** read-only
