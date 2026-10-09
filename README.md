@@ -2,17 +2,17 @@
 
 <img src="assets/banner.svg" alt="poordjaevin" width="100%"/>
 
-<a href="https://github.com/Icaro0310/poordjaevin/actions/workflows/tests.yml"><img src="https://github.com/Icaro0310/poordjaevin/actions/workflows/tests.yml/badge.svg" alt="tests"/></a>
+<a href="https://github.com/Icaro0310/devin-judge/actions/workflows/tests.yml"><img src="https://github.com/Icaro0310/devin-judge/actions/workflows/tests.yml/badge.svg" alt="tests"/></a>
 <a href="https://pypi.org/project/poordjaevin/"><img src="https://img.shields.io/pypi/v/poordjaevin" alt="PyPI"/></a>
 <a href="https://registry.modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP_Registry-published-blueviolet" alt="MCP Registry"/></a>
 <a href="https://m8ven.ai/mcp/icaro0310-poordjaevin-1i4txy?s=readme"><img src="https://m8ven.ai/badge/mcp/icaro0310-poordjaevin-1i4txy" alt="M8ven Score"/></a>
 
 
-<a href="https://scorecard.dev/viewer/?uri=github.com/Icaro0310/poordjaevin"><img src="https://api.scorecard.dev/projects/github.com/Icaro0310/poordjaevin/badge" alt="OpenSSF Scorecard"/></a>
-<a href="https://github.com/Icaro0310/poordjaevin"><img src="https://img.shields.io/github/stars/Icaro0310/poordjaevin" alt="GitHub stars"/></a>
-<a href="https://github.com/Icaro0310/poordjaevin/commits/main"><img src="https://img.shields.io/github/last-commit/Icaro0310/poordjaevin" alt="Last commit"/></a>
+<a href="https://scorecard.dev/viewer/?uri=github.com/Icaro0310/devin-judge"><img src="https://api.scorecard.dev/projects/github.com/Icaro0310/devin-judge/badge" alt="OpenSSF Scorecard"/></a>
+<a href="https://github.com/Icaro0310/devin-judge"><img src="https://img.shields.io/github/stars/Icaro0310/devin-judge" alt="GitHub stars"/></a>
+<a href="https://github.com/Icaro0310/devin-judge/commits/main"><img src="https://img.shields.io/github/last-commit/Icaro0310/devin-judge" alt="Last commit"/></a>
 <a href="https://github.com/Icaro0310/awesome-devin"><img src="https://img.shields.io/badge/part%20of-devin--*-ecosystem-7c3aed" alt="devin-* ecosystem"/></a>
-<a href="https://github.com/Icaro0310/poordjaevin/issues"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome"/></a>
+<a href="https://github.com/Icaro0310/devin-judge/issues"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome"/></a>
 </div>
 
 <!-- DEVIN-ECO:BEGIN -->
@@ -25,6 +25,8 @@
 
 
 <h1 align="center">poordjaevin</h1>
+
+<p align="center"><sub>Renamed (Oct 2026): this repository moved from <code>Icaro0310/poordjaevin</code> to <code>Icaro0310/devin-judge</code>. The PyPI package, console script and MCP registry name stay <code>poordjaevin</code>; stars, issues and history are preserved by the redirect.</sub></p>
 
 <p align="center"><b>The poor man's Jev.</b> An open source, local-first "System One" decision layer for LLM apps: typed decisions with <b>provably calibrated confidence</b>. No API key. No waitlist.</p>
 
@@ -48,7 +50,7 @@ Part of the [awesome-devin](https://github.com/Icaro0310/awesome-devin) ecosyste
 Every LLM-in-JSON-mode hands you a confidence score and hopes you don't check it. poordjaevin checks it. On the shipped eval set it cuts calibration error (ECE) from **0.170 to 0.071** with zero loss of accuracy, and it runs on your laptop with no API key.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Icaro0310/poordjaevin/main/docs/reliability_before_after.png" alt="Reliability diagram: raw confidences are overconfident, calibrated confidences hug the diagonal" width="760">
+  <img src="https://raw.githubusercontent.com/Icaro0310/devin-judge/main/docs/reliability_before_after.png" alt="Reliability diagram: raw confidences are overconfident, calibrated confidences hug the diagonal" width="760">
 </p>
 
 <p align="center"><i>Left: raw confidences, overconfident. Right: calibrated, a stated 0.8 really is right about 80% of the time.</i></p>
@@ -68,7 +70,7 @@ py -m pip install "poordjaevin[local]"
 `[local]` pulls torch + transformers for the offline NLI backend. If you only
 plan to use the Devin ACP backend (`poordjaevin serve` default), a plain
 `pip install poordjaevin` is enough. To install the development version
-straight from GitHub, append `@ git+https://github.com/Icaro0310/poordjaevin.git`
+straight from GitHub, append `@ git+https://github.com/Icaro0310/devin-judge.git`
 to the package spec.
 
 ```python
@@ -194,7 +196,7 @@ poordjaevin exists for the deployments where "call a hosted API" isn't the answe
 Independently measured, not self-reported — see [`crossbench/`](crossbench/) for the full harness, data, and every raw result file.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Icaro0310/poordjaevin/main/docs/vs_field_benchmark.png" alt="Bar chart comparing poordjaevin, Jev, von, and Laya on accuracy and ECE across Banking77 and the multi-primitive set. Jev leads the multi-primitive set on both metrics; von leads Banking77 on both accuracy and calibration among the open options; poordjaevin leads the open options on the multi-primitive set only." width="760">
+  <img src="https://raw.githubusercontent.com/Icaro0310/devin-judge/main/docs/vs_field_benchmark.png" alt="Bar chart comparing poordjaevin, Jev, von, and Laya on accuracy and ECE across Banking77 and the multi-primitive set. Jev leads the multi-primitive set on both metrics; von leads Banking77 on both accuracy and calibration among the open options; poordjaevin leads the open options on the multi-primitive set only." width="760">
 </p>
 
 <p align="center"><i>poordjaevin in red. Chart regenerates from <code>crossbench/results/</code> via <code>crossbench/plot_comparison.py</code> — same numbers as the table below.</i></p>
@@ -295,7 +297,7 @@ Temperature is fit by 5-fold cross-validation, so the "after" number is measured
 Set a risk budget and poordjaevin abstains on its least confident decisions instead of guessing:
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Icaro0310/poordjaevin/main/docs/risk_coverage.png" alt="Risk-coverage curve: error rate drops as the model abstains on low-confidence decisions" width="440">
+  <img src="https://raw.githubusercontent.com/Icaro0310/devin-judge/main/docs/risk_coverage.png" alt="Risk-coverage curve: error rate drops as the model abstains on low-confidence decisions" width="440">
 </p>
 
 At a 10% error budget it confidently answers 55% of decisions and escalates the rest. That is the natural bridge from System One (fast automatic answer) to System Two (a human, or a bigger model).

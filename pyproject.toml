@@ -35,7 +35,7 @@ dev = ["pytest>=8.0", "pytest-cov>=5.0"]
 poordjaevin = "poordjaevin.cli:main"
 
 [project.urls]
-Source = "https://github.com/Icaro0310/poordjaevin"
+Source = "https://github.com/Icaro0310/devin-judge"
 Upstream = "https://github.com/rupeshpoojary9/poorjev"
 
 [tool.hatch.build.targets.wheel]
