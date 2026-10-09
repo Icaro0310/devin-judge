@@ -2,8 +2,9 @@
 Jaccard few-shot retrieval, and the calibrate report. Stdlib only — no
 model, no server, tmp DB per test."""
 
-import pytest
 from pathlib import Path
+
+import pytest
 
 from poordjaevin import djaevin_log
 
@@ -114,8 +115,10 @@ def test_calibrate_per_tool_threshold_map(db):
 
 
 def test_parse_thresholds(monkeypatch):
-    from poordjaevin.mcp_server import _parse_thresholds, _low_conf, \
-        LOW_CONFIDENCE_THRESHOLDS
+    from poordjaevin.mcp_server import (
+        _low_conf,
+        _parse_thresholds,
+    )
     assert _parse_thresholds("0.7") == {"default": 0.7}
     assert _parse_thresholds('{"rate": 0.75, "default": 0.5}') == {
         "rate": 0.75, "default": 0.5}

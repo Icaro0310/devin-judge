@@ -7,7 +7,7 @@ import math
 
 import pytest
 
-from poordjaevin import Client, Choice, Score, Noul
+from poordjaevin import Choice, Client, Noul, Score
 
 
 class FakeBackend:

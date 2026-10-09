@@ -5,8 +5,14 @@ poordjaevin reports is wrong, so they are pinned to values worked out by hand.
 import math
 
 from poordjaevin.metrics import (
-    DecisionRecord, accuracy, brier_toplabel, ece, reliability_bins,
-    risk_coverage, aurc, summarize,
+    DecisionRecord,
+    accuracy,
+    aurc,
+    brier_toplabel,
+    ece,
+    reliability_bins,
+    risk_coverage,
+    summarize,
 )
 
 

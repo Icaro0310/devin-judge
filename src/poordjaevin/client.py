@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from .primitives import Choice, Score, Noul, ChoiceAnswer, ScoreAnswer, NoulAnswer
+from .primitives import Choice, Noul, Score
 
 DEFAULT_TEMPLATE = "This example is {}."
 

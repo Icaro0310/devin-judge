@@ -32,6 +32,7 @@ import subprocess
 import threading
 import time
 
+
 def _default_bridge() -> str:
     package_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(package_root, "scripts", "djaevin-acp-bridge.mjs")
@@ -227,7 +228,7 @@ class AcpDevinBackend:
         try:
             msg = self._request({"warmup": True}, timeout=self.timeout)
             self.model = msg.get("model") or self.model
-        except Exception:
+        except Exception:  # noqa: BLE001, S110 - warmup is best-effort by design
             pass
 
     def usage(self) -> dict:

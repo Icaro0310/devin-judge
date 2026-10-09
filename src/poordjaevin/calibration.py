@@ -24,8 +24,8 @@ from __future__ import annotations
 import math
 import random
 
-from .metrics import DecisionRecord, ece as _ece
-
+from .metrics import DecisionRecord
+from .metrics import ece as _ece
 
 # --------------------------------------------------------------------------- #
 # Temperature scaling

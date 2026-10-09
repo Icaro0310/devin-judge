@@ -119,7 +119,7 @@ class OllamaLogitsBackend:
         self._thread_state.warmup = True
         try:
             self._pair_prob("The service is running.", "This example is a warmup.")
-        except Exception:
+        except Exception:  # noqa: BLE001, S110 - warmup is best-effort by design
             pass
         finally:
             self._thread_state.warmup = False
