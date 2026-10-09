@@ -30,16 +30,16 @@ jobs:
     steps:
       - name: Open PR as github-actions[bot]
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PR_BOT_TOKEN || secrets.GITHUB_TOKEN }}
           HEAD_BRANCH: ${{ inputs.head }}
           BASE_BRANCH: ${{ inputs.base }}
           PR_TITLE: ${{ inputs.title }}
           PR_BODY: ${{ inputs.body }}
         run: |
           set -e
-          if url=$(gh pr view "$HEAD_BRANCH" --json url -q .url 2>/dev/null); then
+          if url=$(gh pr view "$HEAD_BRANCH" -R "$GITHUB_REPOSITORY" --json url -q .url 2>/dev/null); then
             echo "PR already exists: $url"
           else
-            gh pr create --head "$HEAD_BRANCH" --base "$BASE_BRANCH" \
+            gh pr create -R "$GITHUB_REPOSITORY" --head "$HEAD_BRANCH" --base "$BASE_BRANCH" \
               --title "$PR_TITLE" --body "$PR_BODY"
           fi
