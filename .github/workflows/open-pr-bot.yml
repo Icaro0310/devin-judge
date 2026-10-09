@@ -42,14 +42,23 @@ jobs:
             exit 1
           fi
           owner_lc="${GITHUB_REPOSITORY%%/*}"; owner_lc="${owner_lc,,}"
-          existing=$(gh pr list -R "$GITHUB_REPOSITORY" \
-            --head "$HEAD_BRANCH" --base "$BASE_BRANCH" --state open --limit 100 \
-            --json url,headRepositoryOwner \
-            --jq "(map(select(.headRepositoryOwner.login | ascii_downcase == \"$owner_lc\")) + .) | .[0].url // empty")
+          own_pr() {
+            gh pr list -R "$GITHUB_REPOSITORY" \
+              --head "$HEAD_BRANCH" --base "$BASE_BRANCH" --state open --limit 100 \
+              --json url,headRepositoryOwner \
+              --jq "map(select((.headRepositoryOwner.login // \"\") | ascii_downcase == \"$owner_lc\")) | .[0].url // empty"
+          }
+          existing=$(own_pr)
           if [ -n "$existing" ]; then
             echo "PR already exists for $HEAD_BRANCH -> $BASE_BRANCH: $existing"
-          else
-            gh pr create -R "$GITHUB_REPOSITORY" \
+          elif ! gh pr create -R "$GITHUB_REPOSITORY" \
               --head "$HEAD_BRANCH" --base "$BASE_BRANCH" \
-              --title "$PR_TITLE" --body "$PR_BODY"
+              --title "$PR_TITLE" --body "$PR_BODY"; then
+            raced=$(own_pr)
+            if [ -n "$raced" ]; then
+              echo "PR appeared concurrently for $HEAD_BRANCH -> $BASE_BRANCH: $raced"
+            else
+              echo "::error::gh pr create failed and no matching PR exists" >&2
+              exit 1
+            fi
           fi
