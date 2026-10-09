@@ -4,7 +4,7 @@
   "description": "Typed answers with calibrated confidence for agents. Local-first, no API key.",
   "version": "0.1.1",
   "repository": {
-    "url": "https://github.com/Icaro0310/poordjaevin",
+    "url": "https://github.com/Icaro0310/devin-judge",
     "source": "github"
   },
   "packages": [

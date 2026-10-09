@@ -6,9 +6,9 @@ poordjaevin solves the problem of trusting LLM confidence scores. Ask typed ques
 
 ## Docs
 
-- [README](https://github.com/Icaro0310/poordjaevin/blob/main/README.md): full documentation
-- [RESULTS.md](https://github.com/Icaro0310/poordjaevin/blob/main/RESULTS.md): full benchmark tables and honest limitations
-- [crossbench/](https://github.com/Icaro0310/poordjaevin/tree/main/crossbench): independent cross-system benchmark vs Jev, Laya, von
+- [README](https://github.com/Icaro0310/devin-judge/blob/main/README.md): full documentation
+- [RESULTS.md](https://github.com/Icaro0310/devin-judge/blob/main/RESULTS.md): full benchmark tables and honest limitations
+- [crossbench/](https://github.com/Icaro0310/devin-judge/tree/main/crossbench): independent cross-system benchmark vs Jev, Laya, von
 
 ## Key commands
 

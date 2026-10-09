@@ -1,4 +1,4 @@
-# poordjaevin — Corporate Windows guide
+# devin-judge — Corporate Windows guide
 
 This guide covers restricted Windows setup only. For unrestricted Windows, see [README.windows.md](README.windows.md); for features, shared commands, limitations, and the safety model, see [README.md](README.md).
 
