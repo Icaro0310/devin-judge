@@ -2,11 +2,15 @@
 The FastMCP wiring is thin; these pin the logic the tools return.
 """
 
-import pytest
 
 from poordjaevin import Client
 from poordjaevin.mcp_server import (
-    do_classify, do_rate, do_judge, do_gate, do_decide, load_temperature,
+    do_classify,
+    do_decide,
+    do_gate,
+    do_judge,
+    do_rate,
+    load_temperature,
 )
 
 

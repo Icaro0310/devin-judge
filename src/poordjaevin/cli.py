@@ -26,8 +26,8 @@ def _fmt(summary: dict) -> str:
 
 
 def cmd_eval(args) -> int:
-    from .evaluate import evaluate, report
     from .client import Client
+    from .evaluate import evaluate, report
 
     print(f"Running eval set: {args.set}")
     print("(first run downloads a ~400MB model; then offline)\n")
@@ -54,9 +54,10 @@ def cmd_eval(args) -> int:
 
 def cmd_calibrate(args) -> int:
     import json
-    from .evaluate import evaluate
+
+    from .calibration import fit_global_temperature, summarize_calibration
     from .client import Client
-    from .calibration import summarize_calibration, fit_global_temperature
+    from .evaluate import evaluate
 
     print(f"Calibrating on: {args.set}")
     print("(runs the eval set through the local model once)\n")
@@ -85,8 +86,8 @@ def cmd_calibrate(args) -> int:
 
     if args.plots:
         try:
-            from .plots import reliability_pair, risk_coverage_plot
             from .calibration import cross_val_calibrate
+            from .plots import reliability_pair, risk_coverage_plot
             cal, _ = cross_val_calibrate(raw, k=args.folds)
             p1 = reliability_pair(raw, cal, path=args.plot_path)
             p2 = risk_coverage_plot(cal)
@@ -99,6 +100,7 @@ def cmd_calibrate(args) -> int:
 
 def cmd_ask(args) -> int:
     import json
+
     from .client import Client
 
     temperature = 1.0

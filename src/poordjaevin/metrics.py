@@ -14,6 +14,7 @@ it moved. Pure stdlib, no numpy, so it runs anywhere.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from itertools import pairwise
 
 
 @dataclass(frozen=True)
@@ -121,7 +122,7 @@ def aurc(records: list[DecisionRecord]) -> float:
     if len(pts) < 2:
         return pts[0]["risk"] if pts else 0.0
     area = 0.0
-    for a, b in zip(pts, pts[1:]):
+    for a, b in pairwise(pts):
         dx = b["coverage"] - a["coverage"]
         area += (a["risk"] + b["risk"]) / 2 * dx
     return area

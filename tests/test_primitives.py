@@ -7,14 +7,14 @@ tests hammer ``decide`` with adversarial score vectors (NaN, inf, negatives,
 all-zero, huge magnitudes) and assert the contract holds every time.
 """
 
+import dataclasses
 import math
 import random
 
 import pytest
 
-from poordjaevin import Choice, Score, Noul
-from poordjaevin.primitives import softmax, normalize_probs, sigmoid
-
+from poordjaevin import Choice, Noul, Score
+from poordjaevin.primitives import normalize_probs, sigmoid, softmax
 
 # --------------------------------------------------------------------------- #
 # Adversarial score vectors reused across primitives
@@ -206,5 +206,5 @@ def test_noul_rejects_bad_statement(bad):
 
 def test_answers_are_frozen():
     ans = Choice(["a", "b"]).decide([1.0, 0.0])
-    with pytest.raises(Exception):
+    with pytest.raises(dataclasses.FrozenInstanceError):
         ans.value = "b"  # frozen dataclass

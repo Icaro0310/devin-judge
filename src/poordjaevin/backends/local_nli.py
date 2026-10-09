@@ -66,7 +66,7 @@ class LocalNLIBackend:
 
         try:
             self._tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-        except Exception:  # deberta-v3 fast tokenizer can be finicky; fall back
+        except Exception:  # noqa: BLE001 - deberta-v3 fast tokenizer can be finicky; fall back
             self._tokenizer = AutoTokenizer.from_pretrained(self.model_name, use_fast=False)
 
         self._model = AutoModelForSequenceClassification.from_pretrained(self.model_name)

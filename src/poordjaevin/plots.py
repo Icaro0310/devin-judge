@@ -11,7 +11,7 @@ library stays dependency-free.
 
 from __future__ import annotations
 
-from .metrics import DecisionRecord, reliability_bins, ece, accuracy, risk_coverage
+from .metrics import DecisionRecord, accuracy, ece, reliability_bins, risk_coverage
 
 
 def reliability_diagram(records: list[DecisionRecord], title: str = "reliability",
@@ -27,7 +27,6 @@ def reliability_diagram(records: list[DecisionRecord], title: str = "reliability
     width = 1.0 / n_bins
     centers = [(b["lo"] + b["hi"]) / 2 for b in bins]
     accs = [b["acc"] for b in bins]
-    counts = [b["count"] for b in bins]
 
     fig, ax = plt.subplots(figsize=(5.2, 5.2))
     ax.plot([0, 1], [0, 1], "--", color="#888", linewidth=1, label="perfect")

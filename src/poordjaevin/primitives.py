@@ -16,8 +16,7 @@ output, because the output cannot be invalid.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
-
+from dataclasses import dataclass
 
 # --------------------------------------------------------------------------- #
 # Numeric helpers (stdlib only, numerically stable, adversary tolerant)

@@ -6,8 +6,8 @@ MCP tool contract. The bands are the operational vocabulary every caller
 import pytest
 
 from poordjaevin.verdicts import (
-    REVIEW_LOW, REVIEW_HIGH, STRONG_LOW, STRONG_HIGH,
-    noul_verdict, dist_verdict,
+    dist_verdict,
+    noul_verdict,
 )
 
 

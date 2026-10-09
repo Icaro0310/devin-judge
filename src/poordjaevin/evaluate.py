@@ -11,9 +11,9 @@ from __future__ import annotations
 
 import json
 
-from .primitives import Choice, Score, Noul
 from .client import Client
 from .metrics import DecisionRecord, summarize
+from .primitives import Choice, Noul, Score
 
 
 def load_tasks(path: str) -> list[dict]:

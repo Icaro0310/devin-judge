@@ -5,11 +5,13 @@ before we report any before/after number. No model involved.
 import math
 import random
 
-from poordjaevin.metrics import DecisionRecord, ece
 from poordjaevin.calibration import (
-    apply_temperature, fit_temperature, cross_val_calibrate,
-    fit_abstention_threshold, summarize_calibration,
+    apply_temperature,
+    cross_val_calibrate,
+    fit_abstention_threshold,
+    summarize_calibration,
 )
+from poordjaevin.metrics import DecisionRecord, ece
 
 
 def test_apply_temperature_identity_and_bounds():
@@ -44,7 +46,7 @@ def _overconfident_set(n=400, seed=1):
         p = rng.uniform(0.8, 0.99)               # claims high confidence
         correct = rng.random() < 0.65            # but is right only 65% of the time
         gi = 0 if correct else 1
-        dist = (p, 1 - p) if correct else (p, 1 - p)
+        dist = (p, 1 - p)
         recs.append(DecisionRecord(
             confidence=p, correct=correct, prob_gold=(p if correct else 1 - p),
             n_classes=2, dist=dist, gold_index=gi,
@@ -74,7 +76,7 @@ def test_abstention_threshold_controls_risk():
         [DecisionRecord(0.95, True, 0.95, 2, dist=(0.95, 0.05), gold_index=0) for _ in range(20)]
         + [DecisionRecord(0.55, False, 0.45, 2, dist=(0.55, 0.45), gold_index=1) for _ in range(10)]
     )
-    thr, cov, risk = fit_abstention_threshold(recs, target_risk=0.05)
+    _thr, cov, risk = fit_abstention_threshold(recs, target_risk=0.05)
     assert risk <= 0.05
     assert 0.0 < cov <= 1.0
     # answering only the confident ones should cover about the top 20/30

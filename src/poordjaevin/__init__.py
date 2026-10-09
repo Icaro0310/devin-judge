@@ -27,25 +27,25 @@ for _name in (
     if _new not in _os.environ and _old in _os.environ:
         _os.environ[_new] = _os.environ[_old]
 
+from .client import Client
 from .primitives import (
     Choice,
-    Score,
-    Noul,
     ChoiceAnswer,
-    ScoreAnswer,
+    Noul,
     NoulAnswer,
+    Score,
+    ScoreAnswer,
 )
-from .client import Client
 
 __version__ = "0.1.0"
 
 __all__ = [
-    "Client",
     "Choice",
-    "Score",
-    "Noul",
     "ChoiceAnswer",
-    "ScoreAnswer",
+    "Client",
+    "Noul",
     "NoulAnswer",
+    "Score",
+    "ScoreAnswer",
     "__version__",
 ]

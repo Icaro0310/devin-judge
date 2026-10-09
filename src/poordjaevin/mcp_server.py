@@ -26,11 +26,10 @@ import os
 import re
 import sys
 
-from .client import Client
-from .primitives import Choice, Score, Noul
 from . import djaevin_log
-from .verdicts import noul_verdict, dist_verdict
-
+from .client import Client
+from .primitives import Choice, Noul, Score
+from .verdicts import dist_verdict, noul_verdict
 
 # --------------------------------------------------------------------------- #
 # DERIVA DESATIVADA (reversivel) — ver DJAEVIN-LOCAL.md
@@ -96,7 +95,7 @@ def _err(error: Exception) -> dict:
     return {"error": type(error).__name__, "detail": str(error)[:500]}
 
 
-def _levels(scale) -> "list[str] | dict":
+def _levels(scale) -> list[str] | dict:
     """Normalise `scale`: a list of named levels, an int (1..n), or a short
     numeric range like "1-5". Returns a dict (error) when unparseable."""
     if isinstance(scale, bool):
@@ -331,7 +330,7 @@ def build_server(calibrator_path: str | None = "calibration.json"):
             premise = djaevin_log.few_shot_block("judge", statement) + premise
         try:
             ans = do_judge(client, premise, statement)
-        except Exception as error:
+        except Exception as error:  # noqa: BLE001 - tool boundary must not raise
             return _err(error)
         p_yes = ans["prob_true"]
         low_conf = _low_conf("judge", ans["confidence"])
@@ -358,7 +357,7 @@ def build_server(calibrator_path: str | None = "calibration.json"):
             body = djaevin_log.few_shot_block("classify", text) + body
         try:
             ans = do_classify(client, body, [str(o) for o in options])
-        except Exception as error:
+        except Exception as error:  # noqa: BLE001 - tool boundary must not raise
             return _err(error)
         low_conf = _low_conf("classify", ans["confidence"])
         out = {
@@ -386,7 +385,7 @@ def build_server(calibrator_path: str | None = "calibration.json"):
             body = djaevin_log.few_shot_block("rate", text) + body
         try:
             ans = do_rate(client, body, levels)
-        except Exception as error:
+        except Exception as error:  # noqa: BLE001 - tool boundary must not raise
             return _err(error)
         low_conf = _low_conf("rate", ans["confidence"])
         out = {
@@ -536,7 +535,7 @@ def build_server(calibrator_path: str | None = "calibration.json"):
                 return {"renewed": False, "reason": "backend has no warmup"}
             try:
                 backend.warmup()
-            except Exception as error:
+            except Exception as error:  # noqa: BLE001 - report failure, never raise
                 return {"renewed": False, "reason": type(error).__name__}
             return {"renewed": True, "resident": bool(
                 backend.is_resident() if hasattr(backend, "is_resident") else False)}
