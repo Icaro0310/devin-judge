@@ -28,18 +28,26 @@ jobs:
   open-pr:
     runs-on: ubuntu-latest
     steps:
-      - name: Open PR as github-actions[bot]
+      - name: Open PR via PR bot token
         env:
-          GH_TOKEN: ${{ secrets.PR_BOT_TOKEN || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PR_BOT_TOKEN }}
           HEAD_BRANCH: ${{ inputs.head }}
           BASE_BRANCH: ${{ inputs.base }}
           PR_TITLE: ${{ inputs.title }}
           PR_BODY: ${{ inputs.body }}
         run: |
           set -e
-          if url=$(gh pr view "$HEAD_BRANCH" -R "$GITHUB_REPOSITORY" --json url -q .url 2>/dev/null); then
-            echo "PR already exists: $url"
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::error::PR_BOT_TOKEN secret is required: PRs created with GITHUB_TOKEN never trigger CI, review or auto-approve workflows (GitHub anti-recursion). The PR would sit unmergeable, so refusing to open it." >&2
+            exit 1
+          fi
+          existing=$(gh pr list -R "$GITHUB_REPOSITORY" \
+            --head "$HEAD_BRANCH" --base "$BASE_BRANCH" --state open \
+            --json url --jq '.[0].url // empty')
+          if [ -n "$existing" ]; then
+            echo "PR already exists for $HEAD_BRANCH -> $BASE_BRANCH: $existing"
           else
-            gh pr create -R "$GITHUB_REPOSITORY" --head "$HEAD_BRANCH" --base "$BASE_BRANCH" \
+            gh pr create -R "$GITHUB_REPOSITORY" \
+              --head "$HEAD_BRANCH" --base "$BASE_BRANCH" \
               --title "$PR_TITLE" --body "$PR_BODY"
           fi
