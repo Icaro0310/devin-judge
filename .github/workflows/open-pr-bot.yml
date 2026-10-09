@@ -41,9 +41,11 @@ jobs:
             echo "::error::PR_BOT_TOKEN secret is required: PRs created with GITHUB_TOKEN never trigger CI, review or auto-approve workflows (GitHub anti-recursion). The PR would sit unmergeable, so refusing to open it." >&2
             exit 1
           fi
+          owner="${GITHUB_REPOSITORY%%/*}"
           existing=$(gh pr list -R "$GITHUB_REPOSITORY" \
             --head "$HEAD_BRANCH" --base "$BASE_BRANCH" --state open \
-            --json url --jq '.[0].url // empty')
+            --json url,headRepositoryOwner \
+            --jq "map(select(.headRepositoryOwner.login == \"$owner\")) | .[0].url // empty")
           if [ -n "$existing" ]; then
             echo "PR already exists for $HEAD_BRANCH -> $BASE_BRANCH: $existing"
           else
