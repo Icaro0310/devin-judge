@@ -24,6 +24,15 @@
 > Path: QA engineers · step 3/3 — after `devin-evals`
 <!-- DEVIN-ECO:END -->
 
+<!-- DEVIN-WHERE:BEGIN -->
+## Where this fits
+
+- **Job:** Verify
+- **Product:** [`devin-judge`](https://github.com/Icaro0310/devin-judge)
+- **Packages:** `poordjaevin`
+- **Mode:** read-only
+- **Ecosystem:** [`awesome-devin`](https://github.com/Icaro0310/awesome-devin) · registry: [`devin-powerups`](https://github.com/Icaro0310/devin-powerups)
+<!-- DEVIN-WHERE:END -->
 
 <h1 align="center">poordjaevin</h1>
 
