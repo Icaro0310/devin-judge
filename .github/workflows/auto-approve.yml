@@ -12,6 +12,10 @@ name: auto-approve
 # this the PR would sit in REVIEW_REQUIRED forever.
 # (pull_request_review_thread is a webhook but NOT a supported Actions
 # trigger — resolving a thread alone cannot start a run.)
+#
+# Trusted authors: Icaro0310, dependabot[bot], github-actions[bot] — the
+# gate evaluates each PR's own reviews/findings and fails closed for
+# everyone else, including on status events.
 
 on:
   pull_request_target:
