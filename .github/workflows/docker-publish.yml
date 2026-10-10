@@ -30,7 +30,16 @@ jobs:
       - name: Resolve package version
         id: v
         run: |
-          ver=$(sed -n 's/^version = "\(.*\)"/\1/p' pyproject.toml)
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # PR builds run before the bumped version exists on PyPI (the
+            # version-bump PR itself is the proof), so smoke-test the
+            # Dockerfile against the latest published release instead.
+            ver=$(python3 -c "import json,urllib.request; print(json.load(urllib.request.urlopen('https://pypi.org/pypi/poordjaevin/json'))['info']['version'])")
+          else
+            # Publish path: pin the version being released. Only runs after
+            # the publish workflow succeeds, so the pin exists on PyPI.
+            ver=$(sed -n 's/^version = "\(.*\)"/\1/p' pyproject.toml)
+          fi
           test -n "$ver"
           echo "version=$ver" >> "$GITHUB_OUTPUT"
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
