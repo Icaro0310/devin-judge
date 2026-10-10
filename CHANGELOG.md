@@ -12,6 +12,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README gains the generated `Part of the DEVIN ecosystem` block
   (track/nature/audience/interface rendered from the registry).
 
+## [0.1.2] - 2026-10-10
+
+### Added
+
+- `poordjaevin gate` subcommand: machine gate reusing `do_gate`, exits
+  nonzero on block (fail-closed on backend error). PyPI 0.1.1 predates it.
+- `.pre-commit-hooks.yaml` for gating the action in `.devin/judge-action.txt`.
+- `ghcr.io/icaro0310/devin-judge` container image: `poordjaevin[local]`
+  with the zero-shot NLI model baked in, for deterministic offline CI.
+
 ## [0.1.0] - 2026-10-03
 
 ### Added

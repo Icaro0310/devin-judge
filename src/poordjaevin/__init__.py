@@ -37,7 +37,7 @@ from .primitives import (
     ScoreAnswer,
 )
 
-__version__ = "0.1.0"
+__version__ = "0.1.2"
 
 __all__ = [
     "Choice",
