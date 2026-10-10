@@ -137,6 +137,43 @@ def cmd_ask(args) -> int:
     return 0
 
 
+def cmd_gate(args) -> int:
+    import json
+
+    from .client import Client
+    from .mcp_server import do_gate
+
+    if args.action_file:
+        try:
+            with open(args.action_file) as f:
+                action = f.read().strip()
+        except OSError as exc:
+            print(json.dumps({"error": "io", "detail": str(exc)}))
+            return 2
+    else:
+        action = args.action
+    if not action:
+        print("provide --action or --action-file", file=sys.stderr)
+        return 2
+
+    temperature = 1.0
+    if args.calibrator:
+        try:
+            with open(args.calibrator) as f:
+                temperature = json.load(f).get("temperature", 1.0)
+        except FileNotFoundError:
+            pass
+
+    try:
+        out = do_gate(Client(temperature=temperature), action)
+    except Exception as exc:  # noqa: BLE001 — a gate must fail closed
+        print(json.dumps({"error": "backend", "detail": str(exc),
+                          "verdict": "block, require explicit confirmation"}))
+        return 1
+    print(json.dumps(out, indent=2))
+    return 1 if out["block"] else 0
+
+
 def cmd_serve(args) -> int:
     from .mcp_server import main as serve_main
     print("Starting poordjaevin MCP server (stdio). Add it to your MCP client config.",
@@ -177,6 +214,18 @@ def main(argv=None) -> int:
     ps.add_argument("--calibrator", default="calibration.json",
                     help="calibration.json to apply (fitted temperature)")
     ps.set_defaults(func=cmd_serve)
+
+    pg = sub.add_parser(
+        "gate",
+        help="advisory risk gate for one action — JSON verdict; exit 0 "
+        "allow, 1 block/requires-confirmation, 2 usage/io error. Fails "
+        "closed: a backend error exits 1 with a block verdict.")
+    pg.add_argument("--action", default="", help="the action text to gate")
+    pg.add_argument("--action-file",
+                    help="read the action text from a file")
+    pg.add_argument("--calibrator", default="calibration.json",
+                    help="calibration.json to apply (fitted temperature)")
+    pg.set_defaults(func=cmd_gate)
 
     args = p.parse_args(argv)
     return args.func(args)

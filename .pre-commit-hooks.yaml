@@ -1,0 +1,13 @@
+- id: devin-judge-gate
+  name: devin-judge action gate
+  description: >-
+    Advisory risk gate for the action described in
+    `.devin/judge-action.txt` (override `args` to point elsewhere):
+    `poordjaevin gate` exits 0 to allow and 1 to block — including on
+    backend error, since the gate fails closed. Blocks the commit when
+    the judge blocks the action. Needs a poordjaevin backend available
+    (ACP bridge or a local NLI model).
+  entry: poordjaevin gate --action-file .devin/judge-action.txt
+  language: system
+  pass_filenames: false
+  always_run: true
