@@ -117,6 +117,9 @@ def load_calibration(calibrator_path: str | None) -> dict[str, object]:
     """Load backend-specific temperature calibration; abstention is opt-in."""
     defaults = {"temperature": 1.0, "abstain_threshold": 0.0, "backend": None}
     if not calibrator_path or not os.path.exists(calibrator_path):
+        if calibrator_path:
+            print(f"[no calibrator at {calibrator_path}; using raw confidence]",
+                  file=sys.stderr)
         return defaults
     try:
         with open(calibrator_path, encoding="utf-8") as f:
