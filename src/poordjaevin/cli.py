@@ -102,15 +102,9 @@ def cmd_ask(args) -> int:
     import json
 
     from .client import Client
+    from .mcp_server import load_temperature
 
-    temperature = 1.0
-    if args.calibrator:
-        try:
-            with open(args.calibrator) as f:
-                temperature = json.load(f).get("temperature", 1.0)
-        except FileNotFoundError:
-            print(f"[no calibrator at {args.calibrator}; using raw confidence]",
-                  file=sys.stderr)
+    temperature = load_temperature(args.calibrator)
 
     if args.state_file:
         with open(args.state_file) as f:
@@ -140,8 +134,7 @@ def cmd_ask(args) -> int:
 def cmd_gate(args) -> int:
     import json
 
-    from .client import Client
-    from .mcp_server import do_gate
+    from .mcp_server import build_client, do_gate
 
     if args.action_file:
         try:
@@ -156,16 +149,8 @@ def cmd_gate(args) -> int:
         print("provide --action or --action-file", file=sys.stderr)
         return 2
 
-    temperature = 1.0
-    if args.calibrator:
-        try:
-            with open(args.calibrator) as f:
-                temperature = json.load(f).get("temperature", 1.0)
-        except FileNotFoundError:
-            pass
-
     try:
-        out = do_gate(Client(temperature=temperature), action)
+        out = do_gate(build_client(args.calibrator), action)
     except Exception as exc:  # noqa: BLE001 — a gate must fail closed
         print(json.dumps({"error": "backend", "detail": str(exc),
                           "verdict": "block, require explicit confirmation"}))

@@ -89,8 +89,9 @@ def test_load_temperature_reads_value(tmp_path):
 
 
 def test_build_server_registers_advisory_tools(tmp_path):
-    """The built server exposes the advisory tool set. Constructing it
-    must not spawn the ACP bridge (backend init is lazy)."""
+    """The built server exposes exactly the default advisory tool set
+    (extras need POORDJAEVIN_EXTRA_TOOLS=on). Constructing it must not
+    spawn the ACP bridge (backend init is lazy)."""
     pytest.importorskip("mcp")
     from poordjaevin.mcp_server import build_server
 
@@ -99,9 +100,10 @@ def test_build_server_registers_advisory_tools(tmp_path):
     tools = getattr(manager, "_tools", None) or getattr(
         server, "tools", None)
     assert tools is not None
-    names = set(tools)
-    for expected in ("judge", "classify", "rate", "decide", "gate"):
-        assert expected in names
+    assert set(tools) == {
+        "classify", "decide", "djaevin_calibrate", "djaevin_usage",
+        "gate", "judge", "mark_disagreement", "rate",
+    }
 
 
 def _registered_tool_names() -> set[str]:
@@ -128,7 +130,10 @@ def _registered_tool_names() -> set[str]:
 
 
 def test_mcp_tool_surface_is_pinned():
-    """Regression contract: the AI surface is exactly this set. A new
-    tool only lands after a deliberate edit here — check it stays
-    read-only before widening."""
+    """Regression contract: the full decorated tool universe is exactly
+    this set, including opt-in extras (`usage`, `keepalive` only register
+    with POORDJAEVIN_EXTRA_TOOLS=on — the runtime default set is pinned
+    by test_build_server_registers_advisory_tools). A new tool only lands
+    after a deliberate edit here — check it stays read-only before
+    widening."""
     assert _registered_tool_names() == {"classify","decide","djaevin_calibrate","djaevin_usage","gate","judge","keepalive","mark_disagreement","rate","usage"}

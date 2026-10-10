@@ -195,6 +195,35 @@ The agent then has these local tools:
 Why this beats asking an LLM to judge: it is local (private), free (no tokens),
 fast, and the confidence is calibrated instead of made up.
 
+### Gate your commits (pre-commit hook)
+
+The repo ships a [pre-commit](https://pre-commit.com) hook that runs
+`poordjaevin gate` on an action file before every commit:
+
+```yaml
+# .pre-commit-config.yaml (in the repo you want to protect)
+- repo: https://github.com/Icaro0310/devin-judge
+  rev: v0.1.1
+  hooks:
+    - id: devin-judge-gate
+      # optional: point the gate at your own action file
+      # args: [--action-file, path/to/action.txt]
+```
+
+Setup is required: the hook fails closed. Without the action file every
+commit exits 2, so create it once:
+
+```bash
+mkdir -p .devin
+echo "The risky action this commit performs." > .devin/judge-action.txt
+```
+
+Two details worth knowing: pre-commit appends `args` after the flag
+already embedded in `entry`, so repeat `--action-file` to override the
+default path. And the hook runs on every commit (`always_run`,
+`pass_filenames: false`), so it needs a working backend: the `acp`
+default, or `POORDJAEVIN_BACKEND=nli` with the `local` extra installed.
+
 ## Why poordjaevin exists
 
 Most production AI work is not chat. It is fast structured decisions: **route** a ticket, **classify** an intent, **score** a sentiment, **extract** a field, **gate** a tool call. TypeSafe's **Jev** named this category ("System One" models) and nailed the thesis — and, per the independent [cross-system benchmark](crossbench/) below, it currently backs its calibration claims up: it's the strongest model measured here. It's also closed, hosted, and behind a waitlist.
