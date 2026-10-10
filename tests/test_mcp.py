@@ -78,8 +78,9 @@ def test_decide_multiple_questions_one_pass():
     assert out["urgent"]["prob_true"] == 0.9
 
 
-def test_load_temperature_missing_file_defaults_to_one(tmp_path):
+def test_load_temperature_missing_file_defaults_to_one(tmp_path, capsys):
     assert load_temperature(str(tmp_path / "nope.json")) == 1.0
+    assert "no calibrator" in capsys.readouterr().err
 
 
 def test_load_temperature_reads_value(tmp_path):
@@ -88,14 +89,15 @@ def test_load_temperature_reads_value(tmp_path):
     assert load_temperature(str(p)) == 2.71
 
 
-def test_build_server_registers_advisory_tools(tmp_path):
+def test_build_server_registers_advisory_tools(tmp_path, monkeypatch):
     """The built server exposes exactly the default advisory tool set
     (extras need POORDJAEVIN_EXTRA_TOOLS=on). Constructing it must not
     spawn the ACP bridge (backend init is lazy)."""
     pytest.importorskip("mcp")
-    from poordjaevin.mcp_server import build_server
+    import poordjaevin.mcp_server as mcp_server
 
-    server = build_server(calibrator_path=str(tmp_path / "none.json"))
+    monkeypatch.setattr(mcp_server, "EXTRA_TOOLS_ENABLED", False)
+    server = mcp_server.build_server(calibrator_path=str(tmp_path / "none.json"))
     manager = getattr(server, "_tool_manager", None)
     tools = getattr(manager, "_tools", None) or getattr(
         server, "tools", None)

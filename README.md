@@ -18,7 +18,7 @@
 
 <!-- DEVIN-ECO:BEGIN -->
 > **Part of the [DEVIN ecosystem](https://github.com/Icaro0310/awesome-devin)**  
-> Track: Verify · Nature: product  
+> Track: Control · Nature: product  
 > For: AI engineers, QA engineers  
 > Interface: CLI / Python library / MCP server / Bridge  
 > Path: QA engineers · step 3/3 — after `devin-evals`
@@ -203,7 +203,8 @@ The repo ships a [pre-commit](https://pre-commit.com) hook that runs
 ```yaml
 # .pre-commit-config.yaml (in the repo you want to protect)
 - repo: https://github.com/Icaro0310/devin-judge
-  rev: v0.1.1
+  # the hook manifest ships in v0.1.2+; use a tag once cut
+  rev: main
   hooks:
     - id: devin-judge-gate
       # optional: point the gate at your own action file
