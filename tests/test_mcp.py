@@ -94,7 +94,7 @@ def test_build_server_registers_advisory_tools(tmp_path, monkeypatch):
     (extras need POORDJAEVIN_EXTRA_TOOLS=on). Constructing it must not
     spawn the ACP bridge (backend init is lazy)."""
     pytest.importorskip("mcp")
-    import poordjaevin.mcp_server as mcp_server
+    from poordjaevin import mcp_server
 
     monkeypatch.setattr(mcp_server, "EXTRA_TOOLS_ENABLED", False)
     server = mcp_server.build_server(calibrator_path=str(tmp_path / "none.json"))
