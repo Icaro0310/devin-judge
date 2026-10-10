@@ -1,0 +1,16 @@
+- id: devin-judge-gate
+  name: devin-judge action gate
+  description: >-
+    Advisory risk gate for the action described in
+    `.devin/judge-action.txt`. The hook fails closed: a missing action
+    file exits 2 and blocks the commit, so create the file first (see
+    the README "Pre-commit hook" section). To point elsewhere, set
+    `args: [--action-file, <path>]` — pre-commit appends `args` after
+    the embedded `entry` flag, so the flag must be repeated to win.
+    `poordjaevin gate` exits 0 to allow and 1 to block, including on
+    backend error. Needs a poordjaevin backend available
+    (ACP bridge or a local NLI model).
+  entry: poordjaevin gate --action-file .devin/judge-action.txt
+  language: system
+  pass_filenames: false
+  always_run: true

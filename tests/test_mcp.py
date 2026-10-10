@@ -3,6 +3,8 @@ The FastMCP wiring is thin; these pin the logic the tools return.
 """
 
 
+import pytest
+
 from poordjaevin import Client
 from poordjaevin.mcp_server import (
     do_classify,
@@ -76,11 +78,64 @@ def test_decide_multiple_questions_one_pass():
     assert out["urgent"]["prob_true"] == 0.9
 
 
-def test_load_temperature_missing_file_defaults_to_one(tmp_path):
+def test_load_temperature_missing_file_defaults_to_one(tmp_path, capsys):
     assert load_temperature(str(tmp_path / "nope.json")) == 1.0
+    assert "no calibrator" in capsys.readouterr().err
 
 
 def test_load_temperature_reads_value(tmp_path):
     p = tmp_path / "cal.json"
     p.write_text('{"temperature": 2.71}')
     assert load_temperature(str(p)) == 2.71
+
+
+def test_build_server_registers_advisory_tools(tmp_path, monkeypatch):
+    """The built server exposes exactly the default advisory tool set
+    (extras need POORDJAEVIN_EXTRA_TOOLS=on). Constructing it must not
+    spawn the ACP bridge (backend init is lazy)."""
+    pytest.importorskip("mcp")
+    from poordjaevin import mcp_server
+
+    monkeypatch.setattr(mcp_server, "EXTRA_TOOLS_ENABLED", False)
+    server = mcp_server.build_server(calibrator_path=str(tmp_path / "none.json"))
+    manager = getattr(server, "_tool_manager", None)
+    tools = getattr(manager, "_tools", None) or getattr(
+        server, "tools", None)
+    assert tools is not None
+    assert set(tools) == {
+        "classify", "decide", "djaevin_calibrate", "djaevin_usage",
+        "gate", "judge", "mark_disagreement", "rate",
+    }
+
+
+def _registered_tool_names() -> set[str]:
+    """Tools the MCP server registers — derived statically so this test
+    runs without the optional ``mcp`` extra installed."""
+    import ast
+    from pathlib import Path
+
+    src = (
+        Path(__file__).parents[1] / "src" / "poordjaevin" / "mcp_server.py"
+    )
+    tree = ast.parse(src.read_text(encoding="utf-8"))
+    return {
+        node.name
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and any(
+            isinstance(dec, ast.Call)
+            and isinstance(dec.func, ast.Attribute)
+            and dec.func.attr == "tool"
+            for dec in node.decorator_list
+        )
+    }
+
+
+def test_mcp_tool_surface_is_pinned():
+    """Regression contract: the full decorated tool universe is exactly
+    this set, including opt-in extras (`usage`, `keepalive` only register
+    with POORDJAEVIN_EXTRA_TOOLS=on — the runtime default set is pinned
+    by test_build_server_registers_advisory_tools). A new tool only lands
+    after a deliberate edit here — check it stays read-only before
+    widening."""
+    assert _registered_tool_names() == {"classify","decide","djaevin_calibrate","djaevin_usage","gate","judge","keepalive","mark_disagreement","rate","usage"}
