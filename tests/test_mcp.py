@@ -3,6 +3,8 @@ The FastMCP wiring is thin; these pin the logic the tools return.
 """
 
 
+import pytest
+
 from poordjaevin import Client
 from poordjaevin.mcp_server import (
     do_classify,
@@ -84,3 +86,19 @@ def test_load_temperature_reads_value(tmp_path):
     p = tmp_path / "cal.json"
     p.write_text('{"temperature": 2.71}')
     assert load_temperature(str(p)) == 2.71
+
+
+def test_build_server_registers_advisory_tools(tmp_path):
+    """The built server exposes the advisory tool set. Constructing it
+    must not spawn the ACP bridge (backend init is lazy)."""
+    pytest.importorskip("mcp")
+    from poordjaevin.mcp_server import build_server
+
+    server = build_server(calibrator_path=str(tmp_path / "none.json"))
+    manager = getattr(server, "_tool_manager", None)
+    tools = getattr(manager, "_tools", None) or getattr(
+        server, "tools", None)
+    assert tools is not None
+    names = set(tools)
+    for expected in ("judge", "classify", "rate", "decide", "gate"):
+        assert expected in names
