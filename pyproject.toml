@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "poordjaevin"
-version = "0.1.1"
+version = "0.1.2"
 description = "A local-first typed decision layer with calibrated confidence, including an optional Devin ACP backend."
 readme = "README.md"
 requires-python = ">=3.10"

@@ -181,7 +181,7 @@ async function ensureSession() {
   await rpc("initialize", {
     protocolVersion: 1,
     clientCapabilities: { fs: { readTextFile: false, writeTextFile: false }, terminal: false },
-    clientInfo: { name: "poordjaevin", version: "0.1.0" },
+    clientInfo: { name: "poordjaevin", version: "0.1.2" },
   });
   await rpc("authenticate", { methodId: "devin-browser", _meta: { api_key: token } });
   const created = await rpc("session/new", { cwd: process.cwd(), mcpServers: [] });

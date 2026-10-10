@@ -1,0 +1,68 @@
+name: docker-publish
+
+# Builds ghcr.io/icaro0310/devin-judge (poordjaevin[local] + baked zero-shot
+# NLI model). Pushes only after the PyPI publish succeeds so the version it
+# bakes (VERSION build-arg) exists on PyPI. "publish" is the name: field of
+# .github/workflows/pypi-publish.yml; workflow_run matches workflow names.
+
+on:
+  pull_request:
+    paths:
+      - "Dockerfile"
+      - ".github/workflows/docker-publish.yml"
+  workflow_run:
+    workflows: ["publish"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  image:
+    if: >-
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          # workflow_run carries the released commit in head_sha; checking
+          # out the default branch there could build the wrong revision.
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+      - name: Resolve package version
+        id: v
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # PR builds run before the bumped version exists on PyPI (the
+            # version-bump PR itself is the proof), so smoke-test the
+            # Dockerfile against the latest published release instead.
+            ver=$(python3 -c "import json,urllib.request; print(json.load(urllib.request.urlopen('https://pypi.org/pypi/poordjaevin/json'))['info']['version'])")
+          else
+            # Publish path: pin the version being released. Only runs after
+            # the publish workflow succeeds, so the pin exists on PyPI.
+            ver=$(sed -n 's/^version = "\(.*\)"/\1/p' pyproject.toml)
+          fi
+          test -n "$ver"
+          echo "version=$ver" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          load: ${{ github.event_name == 'pull_request' }}
+          build-args: VERSION=${{ steps.v.outputs.version }}
+          tags: |
+            ghcr.io/icaro0310/devin-judge:${{ steps.v.outputs.version }}
+            ghcr.io/icaro0310/devin-judge:latest
+      - name: Smoke
+        run: docker run --rm ghcr.io/icaro0310/devin-judge:latest --help
