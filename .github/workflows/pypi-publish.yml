@@ -36,7 +36,7 @@ jobs:
         run: |
           ver=$(sed -n 's/^version = "\(.*\)"/\1/p' pyproject.toml)
           test -n "$ver"
-          pip install --no-cache-dir --target /tmp/verchk dist/*.whl
+          pip install --no-cache-dir --no-deps --target /tmp/verchk dist/*.whl
           VER="$ver" python -c "import importlib, os, sys; sys.path.insert(0, '/tmp/verchk'); m = importlib.import_module('$PKG'); assert getattr(m, '__version__', None) == os.environ['VER'], f'wheel __version__ {getattr(m, \"__version__\", None)} != pyproject {os.environ[\"VER\"]}'"
       - name: Upload to PyPI
         uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
