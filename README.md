@@ -6,7 +6,7 @@
 <a href="https://pypi.org/project/poordjaevin/"><img src="https://img.shields.io/pypi/v/poordjaevin" alt="PyPI"/></a>
 <a href="https://registry.modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP_Registry-published-blueviolet" alt="MCP Registry"/></a>
 <a href="https://m8ven.ai/mcp/icaro0310-poordjaevin-1i4txy?s=readme"><img src="https://m8ven.ai/badge/mcp/icaro0310-poordjaevin-1i4txy" alt="M8ven Score"/></a>
-<a href="https://glama.ai/mcp/servers/Icaro0310/poordjaevin"><img src="https://img.shields.io/badge/Glama-claimed-blue" alt="Glama"/></a>
+<a href="https://glama.ai/mcp/servers/Icaro0310/devin-judge"><img src="https://img.shields.io/badge/Glama-claimed-blue" alt="Glama"/></a>
 
 <a href="https://scorecard.dev/viewer/?uri=github.com/Icaro0310/devin-judge"><img src="https://api.scorecard.dev/projects/github.com/Icaro0310/devin-judge/badge" alt="OpenSSF Scorecard"/></a>
 <a href="https://www.bestpractices.dev/projects/15336"><img src="https://www.bestpractices.dev/projects/15336/badge" alt="OpenSSF Best Practices"/></a>
@@ -109,7 +109,7 @@ One call, one model pass, four typed answers. No prompt engineering, no JSON par
 
 ## Use it with Devin (MCP server, Devin-only)
 
-<!-- mcp-name: io.github.Icaro0310/poordjaevin -->
+<!-- mcp-name: io.github.Icaro0310/devin-judge -->
 
 poordjaevin ships an MCP server, so Devin (or any MCP client) can make fast,
 calibrated decisions as tools. The obvious use: gate a risky tool call before

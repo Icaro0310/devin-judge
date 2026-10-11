@@ -13,13 +13,13 @@ Personal Windows uses the extended runtime: local execution plus optional Devin 
 Install the isolated Python CLI:
 
 ```powershell
-uv tool install "poordjaevin"
+uv tool install "poordjaevin[local,mcp]"
 ```
 
 ## Devin paths
 
 Session data normally lives under `%APPDATA%\devin\cli\`; UI state and ACP stores under `%APPDATA%\Devin\User\`.
-Use the tool's documented `--data-dir` or `--config-dir` flags for non-default locations.
+Use `--data-dir`/`--config-dir` where the tool documents them for non-default locations.
 
 ## Environment notes
 
