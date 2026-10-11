@@ -3,7 +3,8 @@ name: publish
 # Publishes to PyPI via Trusted Publishing (OIDC): the publisher registered on
 # PyPI expects job_workflow_ref == <this repo>/.github/workflows/pypi-publish.yml,
 # so the upload job must live in this file (not a reusable workflow).
-# Env "pypi" must exist; PYPI_API_TOKEN repo secret remains as fallback.
+# Env "pypi" must exist. OIDC only — no PYPI_API_TOKEN fallback (an
+# account-scoped token can upload to any project; do not reintroduce one).
 
 on:
   release:
