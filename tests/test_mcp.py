@@ -64,6 +64,41 @@ def test_judge_inputs_without_context_is_flagged_self_assessment():
         "s", _SELF_ASSESSMENT_HYPOTHESIS, True)
 
 
+def test_uncalibrated_judge_logs_and_thresholds_as_self_assessment(
+        tmp_path, monkeypatch):
+    """Context-free judge is a different question shape: it logs under
+    judge_self_assessment so corrections never enter the judge few-shot
+    pool, and it consults the judge_self_assessment low-confidence
+    threshold so djaevin_calibrate's per-tool suggestions actually apply.
+    """
+    import asyncio
+    import json
+    import sqlite3
+
+    from poordjaevin import mcp_server
+
+    monkeypatch.setenv("POORDJAEVIN_LOG_DB", str(tmp_path / "djaevin_log.db"))
+    # A "judge" threshold that would NOT flag confidence 0.5, vs a
+    # self-assessment threshold that does — proves which name is read.
+    monkeypatch.setitem(mcp_server.LOW_CONFIDENCE_THRESHOLDS, "judge", 0.0)
+    monkeypatch.setitem(
+        mcp_server.LOW_CONFIDENCE_THRESHOLDS, "judge_self_assessment", 0.9)
+    monkeypatch.setattr(
+        mcp_server, "build_client",
+        lambda *a, **k: Client(backend=ScriptedBackend([0.5])))
+
+    server = mcp_server.build_server()
+    result = asyncio.run(server.call_tool("decide", {"questions": [
+        {"id": "j", "type": "judge", "statement": "the sky is blue"}]}))
+    answer = json.loads(result.content[0].text)["answers"][0]
+    assert answer["uncalibrated"] is True
+    assert answer["low_confidence"] is True
+
+    rows = sqlite3.connect(tmp_path / "djaevin_log.db").execute(
+        "SELECT tool FROM djaevin_decisions").fetchall()
+    assert [r[0] for r in rows] == ["judge_self_assessment"]
+
+
 def test_rate_returns_level_and_score():
     client = Client(backend=ScriptedBackend([0.1, 0.2, 0.9]))
     out = do_rate(client, "this is infuriating", ["low", "medium", "high"])

@@ -62,6 +62,16 @@ test('chat /judge: pipes inside evidence stay in the premise', async () => {
   ]);
 });
 
+test('chat /judge abstains on ambiguous input (more than one " | ")', async () => {
+  const backend = scripted(() => 0.9);
+  const client = new DecisionClient(backend);
+  const md = await handleChat('judge', 'a | b | c', client);
+  assert.match(md, /ABSTAIN/);
+  assert.match(md, /ambiguous/);
+  // Never guess a side: the model is not called at all.
+  assert.deepEqual(backend.calls, []);
+});
+
 test('chat /judge rejects dangling separator', async () => {
   const backend = scripted(() => 0.9);
   const client = new DecisionClient(backend);

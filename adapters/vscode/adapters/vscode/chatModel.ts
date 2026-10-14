@@ -63,11 +63,18 @@ async function runJudge(
   // well-formed entailment question — the model's number would be noise
   // rendered as a verdict. The chat surface abstains instead of calling the
   // model at all (the judge *tool* marks the same call uncalibrated).
-  // Split on the LAST pipe: evidence may itself contain '|'; the statement
-  // being judged is always the final segment.
-  const sep = prompt.lastIndexOf('|');
-  const context = sep >= 0 ? prompt.slice(0, sep).trim() : '';
-  const statement = sep >= 0 ? prompt.slice(sep + 1).trim() : '';
+  // The separator is the SPACED pipe " | " and must appear exactly once:
+  // unspaced 'a|b' is content, and multiple separators are ambiguous —
+  // picking first-vs-last would silently judge the wrong claim.
+  const parts = prompt.split(' | ');
+  if (parts.length > 2) {
+    return [
+      '**ABSTAIN** · ambiguous — ` | ` appears more than once',
+      '`/judge <context> | <statement>` — exactly one spaced pipe separates evidence from the claim',
+    ].join('\n');
+  }
+  const context = parts.length === 2 ? (parts[0] ?? '').trim() : '';
+  const statement = parts.length === 2 ? (parts[1] ?? '').trim() : '';
   if (!context || !statement) {
     return [
       '**ABSTAIN** · calibrated judgement requires a premise',

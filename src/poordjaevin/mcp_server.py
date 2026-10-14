@@ -362,8 +362,13 @@ def build_server(calibrator_path: str | None = "calibration.json"):
             ans = do_judge(client, premise, hypothesis)
         except Exception as error:  # noqa: BLE001 - tool boundary must not raise
             return _err(error)
+        # Self-assessment answers use a different question shape — they log
+        # and threshold under "judge_self_assessment" so djaevin_calibrate's
+        # per-tool suggestions actually apply and they never enter the
+        # "judge" few-shot pool.
+        tool = "judge_self_assessment" if uncalibrated else "judge"
         p_yes = ans["prob_true"]
-        low_conf = _low_conf("judge", ans["confidence"])
+        low_conf = _low_conf(tool, ans["confidence"])
         out = {
             "answer": "yes" if ans["value"] is True else "no",
             "p_yes": p_yes,
@@ -377,12 +382,8 @@ def build_server(calibrator_path: str | None = "calibration.json"):
         }
         if record:
             out.update(_usage_fields())
-            # Self-assessment answers use a different question shape — keep
-            # them out of the "judge" few-shot pool so a corrected one never
-            # becomes an example for premise-weighed judgments.
-            log_tool = "judge_self_assessment" if uncalibrated else "judge"
             out["decision_id"] = _log(
-                log_tool, statement, out["answer"],
+                tool, statement, out["answer"],
                 out["confidence"], out["low_confidence"])
         return out
 
