@@ -48,32 +48,26 @@ export function endpointFilePath(opts: EndpointEnv = {}): string {
   return path.join(base, 'poordjaevin', 'vscode-lm-endpoint.json');
 }
 
-/** Write the endpoint spec (mkdir + fd-write + fchmod). The file carries a
- *  bearer token, so it must be 0o600 the whole time: open the fd first,
- *  fchmod it, and only then write the token. A pre-existing permissive file
- *  is restricted before a single new byte lands; a symlinked path is
- *  replaced by a real file rather than followed, so the token cannot be
- *  redirected to an unintended target. */
+/** Write the endpoint spec atomically: a sibling temp file created with
+ *  mode 0o600, then renamed over the target. The token only ever exists in
+ *  a file that was born 0o600, on every filesystem; a permissive stale file
+ *  or a symlink at the discovery path is replaced by the real file rather
+ *  than followed or extended. No dependence on chmod working. */
 export function writeEndpointFile(file: string, spec: EndpointSpec): void {
   fs.mkdirSync(path.dirname(file), { recursive: true });
+  const tmp = `${file}.tmp-${process.pid}`;
   try {
-    if (fs.lstatSync(file).isSymbolicLink()) {
-      fs.unlinkSync(file);
-    }
-  } catch {
-    // missing path is the common case
-  }
-  const fd = fs.openSync(file, 'w', 0o600);
-  try {
-    try {
-      fs.fchmodSync(fd, 0o600);
-    } catch {
-      // Filesystems without POSIX modes have no permission window to race;
-      // the mode request at open is the best available there.
-    }
-    fs.writeSync(fd, `${JSON.stringify(spec)}\n`, null, 'utf8');
+    fs.writeFileSync(tmp, `${JSON.stringify(spec)}\n`, {
+      encoding: 'utf8',
+      mode: 0o600,
+    });
+    fs.renameSync(tmp, file);
   } finally {
-    fs.closeSync(fd);
+    try {
+      fs.unlinkSync(tmp);
+    } catch {
+      // already renamed, or the write failed before tmp existed
+    }
   }
 }
 
