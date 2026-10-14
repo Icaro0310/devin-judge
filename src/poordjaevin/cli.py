@@ -16,14 +16,28 @@ import os
 import sys
 
 
-def _env_or_local_client(**client_kwargs):
+def _env_or_local_client(calibrator_path: str | None = None, **client_kwargs):
     """Client honoring POORDJAEVIN_BACKEND when set — plain Client()
-    (lazy local NLI) when unset, preserving pre-selector behaviour."""
+    (lazy local NLI) when unset, preserving pre-selector behaviour.
+    The selected-backend arm loads `calibrator_path` via build_client
+    (None falls back to build_client's default calibration.json)."""
     if not os.environ.get("POORDJAEVIN_BACKEND"):
         from .client import Client
         return Client(**client_kwargs)
     from .mcp_server import build_client
-    return build_client()
+    return build_client(calibrator_path)
+
+
+def _env_or_local_raw_client():
+    """The selected backend WITHOUT deployment calibration — evaluate and
+    calibrate must collect raw scores, or a refit would fit already-
+    temperature-scaled probabilities and the saved calibrator would then
+    mis-scale every later answer."""
+    if not os.environ.get("POORDJAEVIN_BACKEND"):
+        from .client import Client
+        return Client()
+    from .mcp_server import _select_backend
+    return Client(backend=_select_backend())
 
 
 def _fmt(summary: dict) -> str:
@@ -40,8 +54,12 @@ def cmd_eval(args) -> int:
     from .evaluate import evaluate, report
 
     print(f"Running eval set: {args.set}")
-    print("(first run downloads a ~400MB model; then offline)\n")
-    client = _env_or_local_client()
+    backend_name = os.environ.get("POORDJAEVIN_BACKEND")
+    if backend_name:
+        print(f"(backend: {backend_name})\n")
+    else:
+        print("(first run downloads a ~400MB model; then offline)\n")
+    client = _env_or_local_raw_client()
     records, _ = evaluate(args.set, client=client, verbose=args.verbose)
     rep = report(records)
 
@@ -69,8 +87,13 @@ def cmd_calibrate(args) -> int:
     from .evaluate import evaluate
 
     print(f"Calibrating on: {args.set}")
-    print("(runs the eval set through the local model once)\n")
-    raw, _ = evaluate(args.set, client=_env_or_local_client())
+    backend_name = os.environ.get("POORDJAEVIN_BACKEND")
+    if backend_name:
+        print(f"(backend: {backend_name})\n")
+    else:
+        print("(runs the eval set through the local model once)\n")
+    client = _env_or_local_raw_client()
+    raw, _ = evaluate(args.set, client=client)
 
     summ = summarize_calibration(raw, k=args.folds, target_risk=args.target_risk)
     global_T = fit_global_temperature(raw)  # the deployable scalar
@@ -88,6 +111,11 @@ def cmd_calibrate(args) -> int:
         "abstain_threshold": summ["abstain_threshold"],
         "ece_before": summ["ece_before"],
         "ece_after": summ["ece_after"],
+        # Tag the confidence source of the backend that supplied the fit
+        # samples — load_calibration defaults a missing tag to local_nli
+        # and build_client would then discard this temperature for ACP or
+        # vscode-lm deployments.
+        "backend": getattr(client.backend, "confidence_source", "local_nli"),
     }
     with open(args.out, "w") as f:
         json.dump(saved, f, indent=2)
@@ -128,7 +156,9 @@ def cmd_ask(args) -> int:
 
     from .evaluate import _build_primitive
     questions = {name: _build_primitive(spec) for name, spec in specs.items()}
-    res = _env_or_local_client(temperature=temperature).ask(state, questions)
+    res = _env_or_local_client(
+        calibrator_path=args.calibrator,
+        temperature=temperature).ask(state, questions)
 
     print(json.dumps({
         name: {
