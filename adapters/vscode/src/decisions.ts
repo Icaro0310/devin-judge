@@ -626,21 +626,41 @@ export function parseLevels(scale: unknown): string[] {
   throw new Error("scale must be a list, int, or range like '1-5'");
 }
 
-/** `judge` tool shape (mcp_server._judge minus logging/few-shot). */
-export interface JudgeToolResult {
-  answer: 'yes' | 'no' | typeof ABSTAIN;
-  p_yes: number;
-  p_no: number;
+/** `judge` tool shapes (mcp_server._judge minus logging/few-shot),
+ *  discriminated on `uncalibrated`: a premise-weighed call returns a
+ *  verdict-shaped answer; a no-premise call returns the statement's
+ *  self-assessment as a bare score — never a yes/no answer, a p_yes/p_no
+ *  pair or a verdict band, so the number cannot be read as a verdict. */
+interface JudgeToolBase {
   confidence: number;
   confidence_source: string;
   low_confidence: boolean;
-  verdict: string;
-  /** True when no premise was supplied: the score is the statement's
-   *  self-assessment, not an entailment measurement. */
-  uncalibrated: boolean;
-  /** What the score is weighed against: 'premise' or 'self-assessment only'. */
-  basis: string;
 }
+
+export interface CalibratedJudgeResult extends JudgeToolBase {
+  answer: 'yes' | 'no' | typeof ABSTAIN;
+  p_yes: number;
+  p_no: number;
+  verdict: string;
+  uncalibrated: false;
+  /** What the score is weighed against. */
+  basis: 'premise';
+}
+
+export interface UncalibratedJudgeResult extends JudgeToolBase {
+  /** No verdict-shaped answer exists — always null, never yes/no/ABSTAIN. */
+  answer: null;
+  /** The statement's self-assessment prob — the single number that carries
+   *  the result when no premise exists to weigh it against. */
+  uncalibrated_score: number;
+  /** Literal 'self_report': the question shape is self-assessment by
+   *  definition, whichever backend produced the number. */
+  confidence_source: 'self_report';
+  uncalibrated: true;
+  basis: 'self-assessment only';
+}
+
+export type JudgeToolResult = CalibratedJudgeResult | UncalibratedJudgeResult;
 
 export async function judgeTool(
   client: DecisionClient,
@@ -652,8 +672,19 @@ export async function judgeTool(
   const ans = uncalibrated
     ? await doJudge(client, statement, SELF_ASSESSMENT_HYPOTHESIS)
     : await doJudge(client, context, statement);
-  const pYes = ans.prob_true;
   const lowConf = ans.confidence < lowConfidenceThreshold;
+  if (uncalibrated) {
+    return {
+      answer: null,
+      uncalibrated_score: ans.prob_true,
+      confidence: ans.confidence,
+      confidence_source: CONFIDENCE_SOURCE,
+      low_confidence: lowConf,
+      uncalibrated: true,
+      basis: 'self-assessment only',
+    };
+  }
+  const pYes = ans.prob_true;
   return {
     answer: ans.value === true ? 'yes' : ans.value === false ? 'no' : ABSTAIN,
     p_yes: pYes,
@@ -662,8 +693,8 @@ export async function judgeTool(
     confidence_source: CONFIDENCE_SOURCE,
     low_confidence: lowConf,
     verdict: noulVerdict(pYes, lowConf),
-    uncalibrated,
-    basis: uncalibrated ? 'self-assessment only' : 'premise',
+    uncalibrated: false,
+    basis: 'premise',
   };
 }
 
