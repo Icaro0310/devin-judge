@@ -82,6 +82,14 @@ async function runJudge(
     ].join('\n');
   }
   const r = await judgeTool(client, statement, context);
+  // Unreachable by construction: the checks above return before any
+  // no-premise prompt reaches judgeTool, so r is always calibrated here.
+  if (r.uncalibrated) {
+    return [
+      '**ABSTAIN** · calibrated judgement requires a premise',
+      '`/judge <context> | <statement>` — the context is the evidence the statement is weighed against',
+    ].join('\n');
+  }
   const lines = [
     `**${r.answer.toUpperCase()}** · ${r.verdict}`,
     `p_yes ${r.p_yes} · p_no ${r.p_no} · confidence ${r.confidence}` +
