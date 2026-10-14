@@ -12,7 +12,18 @@ diagram (the launch asset) once matplotlib is installed.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
+
+
+def _env_or_local_client(**client_kwargs):
+    """Client honoring POORDJAEVIN_BACKEND when set — plain Client()
+    (lazy local NLI) when unset, preserving pre-selector behaviour."""
+    if not os.environ.get("POORDJAEVIN_BACKEND"):
+        from .client import Client
+        return Client(**client_kwargs)
+    from .mcp_server import build_client
+    return build_client()
 
 
 def _fmt(summary: dict) -> str:
@@ -26,12 +37,11 @@ def _fmt(summary: dict) -> str:
 
 
 def cmd_eval(args) -> int:
-    from .client import Client
     from .evaluate import evaluate, report
 
     print(f"Running eval set: {args.set}")
     print("(first run downloads a ~400MB model; then offline)\n")
-    client = Client()
+    client = _env_or_local_client()
     records, _ = evaluate(args.set, client=client, verbose=args.verbose)
     rep = report(records)
 
@@ -56,12 +66,11 @@ def cmd_calibrate(args) -> int:
     import json
 
     from .calibration import fit_global_temperature, summarize_calibration
-    from .client import Client
     from .evaluate import evaluate
 
     print(f"Calibrating on: {args.set}")
     print("(runs the eval set through the local model once)\n")
-    raw, _ = evaluate(args.set, client=Client())
+    raw, _ = evaluate(args.set, client=_env_or_local_client())
 
     summ = summarize_calibration(raw, k=args.folds, target_risk=args.target_risk)
     global_T = fit_global_temperature(raw)  # the deployable scalar
@@ -101,7 +110,6 @@ def cmd_calibrate(args) -> int:
 def cmd_ask(args) -> int:
     import json
 
-    from .client import Client
     from .mcp_server import load_temperature
 
     temperature = load_temperature(args.calibrator)
@@ -120,7 +128,7 @@ def cmd_ask(args) -> int:
 
     from .evaluate import _build_primitive
     questions = {name: _build_primitive(spec) for name, spec in specs.items()}
-    res = Client(temperature=temperature).ask(state, questions)
+    res = _env_or_local_client(temperature=temperature).ask(state, questions)
 
     print(json.dumps({
         name: {
