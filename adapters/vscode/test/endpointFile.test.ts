@@ -80,3 +80,35 @@ test('writeEndpointFile + removeEndpointFile roundtrip with mode 0o600', () => {
   removeEndpointFile(file); // idempotent
   fs.rmSync(dir, { recursive: true, force: true });
 });
+
+test('writeEndpointFile restricts a pre-existing permissive file', () => {
+  if (process.platform === 'win32') return; // POSIX modes only
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'judge-ep-'));
+  const file = path.join(dir, 'vscode-lm-endpoint.json');
+  fs.writeFileSync(file, '{"stale":true}', { mode: 0o644 });
+  assert.equal(fs.statSync(file).mode & 0o777, 0o644);
+  writeEndpointFile(file, {
+    url: 'http://127.0.0.1:1/score', token: 'secret', pid: 1,
+    extension: 'icaro0310.judge', version: '0.0.0',
+  });
+  assert.equal(fs.statSync(file).mode & 0o777, 0o600);
+  assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).token, 'secret');
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('writeEndpointFile replaces a symlink instead of following it', () => {
+  if (process.platform === 'win32') return; // needs symlink privilege
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'judge-ep-'));
+  const target = path.join(dir, 'target.json');
+  fs.writeFileSync(target, '{"keep":true}');
+  const file = path.join(dir, 'vscode-lm-endpoint.json');
+  fs.symlinkSync(target, file);
+  writeEndpointFile(file, {
+    url: 'http://127.0.0.1:1/score', token: 'secret', pid: 1,
+    extension: 'icaro0310.judge', version: '0.0.0',
+  });
+  assert.equal(fs.lstatSync(file).isSymbolicLink(), false);
+  assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).token, 'secret');
+  assert.deepEqual(JSON.parse(fs.readFileSync(target, 'utf8')), { keep: true });
+  fs.rmSync(dir, { recursive: true, force: true });
+});

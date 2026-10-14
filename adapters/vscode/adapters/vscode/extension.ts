@@ -11,6 +11,7 @@
  */
 
 import * as crypto from 'node:crypto';
+import * as fs from 'node:fs';
 import * as vscode from 'vscode';
 import {
   loadCalibration,
@@ -109,13 +110,21 @@ export function activate(context: vscode.ExtensionContext): Promise<void> {
       });
       running = endpoint;
       const file = endpointFilePath();
-      writeEndpointFile(file, {
-        url: `http://127.0.0.1:${endpoint.port}/score`,
-        token,
-        pid: process.pid,
-        extension: EXTENSION_ID,
-        version,
-      });
+      try {
+        writeEndpointFile(file, {
+          url: `http://127.0.0.1:${endpoint.port}/score`,
+          token,
+          pid: process.pid,
+          extension: EXTENSION_ID,
+          version,
+        });
+      } catch (writeError) {
+        // No discovery file means the listener is unreachable but still
+        // holds a port: fail closed rather than run an orphan endpoint.
+        running = null;
+        await endpoint.close();
+        throw writeError;
+      }
       advertisedFile = file;
       output.appendLine(
         `vscode-lm endpoint on 127.0.0.1:${endpoint.port} (advertised in ${file})`,
@@ -134,9 +143,17 @@ export function activate(context: vscode.ExtensionContext): Promise<void> {
 
 export async function deactivate(): Promise<void> {
   // Un-advertise first so consumers stop dialing, then stop listening.
+  // Another window may own the advertised file — only remove what we wrote.
   const file = advertisedFile;
   advertisedFile = null;
-  if (file) removeEndpointFile(file);
+  if (file) {
+    try {
+      const spec = JSON.parse(fs.readFileSync(file, 'utf8'));
+      if (spec.pid === process.pid) removeEndpointFile(file);
+    } catch {
+      // unreadable file: leave it, a stale spec fails closed upstream
+    }
+  }
   const endpoint = running;
   running = null;
   if (endpoint) await endpoint.close();

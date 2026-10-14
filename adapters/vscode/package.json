@@ -89,31 +89,31 @@
           "type": "string",
           "default": "calibration.json",
           "description": "Path to a poordjaevin calibration file ({temperature, abstain_threshold, backend}); relative paths resolve against the first workspace folder.",
-          "scope": "resource"
+          "scope": "window"
         },
         "judge.model.vendor": {
           "type": "string",
           "default": "",
           "description": "Optional chat-model vendor filter for vscode.lm.selectChatModels (e.g. \"copilot\"). Empty = any.",
-          "scope": "resource"
+          "scope": "window"
         },
         "judge.model.family": {
           "type": "string",
           "default": "",
           "description": "Optional chat-model family filter for vscode.lm.selectChatModels (e.g. \"gpt-4o\"). Empty = any.",
-          "scope": "resource"
+          "scope": "window"
         },
         "judge.model.id": {
           "type": "string",
           "default": "",
           "description": "Optional chat-model id filter for vscode.lm.selectChatModels. Empty = any.",
-          "scope": "resource"
+          "scope": "window"
         },
         "judge.endpoint.enabled": {
           "type": "boolean",
           "default": true,
           "description": "Serve the localhost scoring endpoint (127.0.0.1, bearer token) that poordjaevin's vscode-lm backend POSTs to.",
-          "scope": "resource"
+          "scope": "window"
         }
       }
     }

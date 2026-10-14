@@ -27,13 +27,19 @@ class Client:
     def __init__(self, backend: Backend | None = None,
                  hypothesis_template: str = DEFAULT_TEMPLATE,
                  temperature: float = 1.0,
-                 abstain_threshold: float = 0.0):
+                 abstain_threshold: float = 0.0,
+                 calibrated_source: str | None = None):
         self._backend = backend
         self.hypothesis_template = hypothesis_template
         # A fitted temperature (from `poordjaevin calibrate`) makes ask()'s
         # confidences calibrated. 1.0 is a no-op (raw).
         self.temperature = temperature
         self.abstain_threshold = abstain_threshold
+        # The confidence source the temperature was fitted for. Calibration
+        # does not transfer: when the backend serves a batch from another
+        # source (e.g. vscode-lm falling back to NLI), raw confidence is the
+        # honest answer. None keeps the legacy always-apply behaviour.
+        self._calibrated_source = calibrated_source
 
     @property
     def backend(self) -> Backend:
@@ -77,30 +83,38 @@ class Client:
                 f"backend returned {len(probs)} scores for {len(pairs)} pairs"
             )
 
+        calibrated = (
+            self._calibrated_source is None
+            or getattr(self.backend, "confidence_source", self._calibrated_source)
+            == self._calibrated_source
+        )
+        temperature = self.temperature if calibrated else 1.0
+        abstain = self.abstain_threshold if calibrated else 0.0
+
         out: dict[str, object] = {}
         for name, prim, start, count, mode in plan:
             seg = probs[start:start + count]
             if mode == "noul":
                 p_true = seg[0]
-                if self.temperature != 1.0:
+                if temperature != 1.0:
                     from .calibration import apply_temperature
-                    p_true = apply_temperature([1.0 - p_true, p_true], self.temperature)[1]
+                    p_true = apply_temperature([1.0 - p_true, p_true], temperature)[1]
                 out[name] = prim.decide(
                     p_true,
                     kind="prob",
-                    abstain_below=self.abstain_threshold,
+                    abstain_below=abstain,
                 )
             else:
                 # entailment probs per option/level, normalised across the set
                 dist = seg
-                if self.temperature != 1.0:
+                if temperature != 1.0:
                     from .calibration import apply_temperature
                     total = sum(max(0.0, s) for s in seg) or 1.0
                     norm = [max(0.0, s) / total for s in seg]
-                    dist = apply_temperature(norm, self.temperature)
+                    dist = apply_temperature(norm, temperature)
                 out[name] = prim.decide(
                     dist,
                     kind="probs",
-                    threshold=self.abstain_threshold,
+                    threshold=abstain,
                 )
         return out

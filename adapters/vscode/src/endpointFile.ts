@@ -48,19 +48,27 @@ export function endpointFilePath(opts: EndpointEnv = {}): string {
   return path.join(base, 'poordjaevin', 'vscode-lm-endpoint.json');
 }
 
-/** Write the endpoint spec atomically-ish (mkdir + write + chmod). The
- *  file carries a bearer token — always 0o600, even when overwriting an
- *  existing file (writeFileSync's mode only applies at creation). */
+/** Write the endpoint spec (mkdir + fd-write + fchmod). The file carries a
+ *  bearer token, so it must be 0o600 the whole time: open the fd first,
+ *  fchmod it, and only then write the token. A pre-existing permissive file
+ *  is restricted before a single new byte lands; a symlinked path is
+ *  replaced by a real file rather than followed, so the token cannot be
+ *  redirected to an unintended target. */
 export function writeEndpointFile(file: string, spec: EndpointSpec): void {
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, `${JSON.stringify(spec)}\n`, {
-    encoding: 'utf8',
-    mode: 0o600,
-  });
   try {
-    fs.chmodSync(file, 0o600);
+    if (fs.lstatSync(file).isSymbolicLink()) {
+      fs.unlinkSync(file);
+    }
   } catch {
-    // best-effort on filesystems without POSIX modes
+    // missing path is the common case
+  }
+  const fd = fs.openSync(file, 'w', 0o600);
+  try {
+    fs.fchmodSync(fd, 0o600);
+    fs.writeSync(fd, `${JSON.stringify(spec)}\n`, null, 'utf8');
+  } finally {
+    fs.closeSync(fd);
   }
 }
 

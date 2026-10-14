@@ -52,6 +52,14 @@ class _Handler(BaseHTTPRequestHandler):
         if any("short" in h for _, h in pairs):
             self._reply(200, {"probs": [50], "model": "fake-copilot"})
             return
+        if any("nan" in h for _, h in pairs):
+            body = b'{"probs": [NaN, 50], "model": "fake-copilot"}'
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
         # deterministic: i*10 + 40, plus edge values to exercise the clamp
         probs = [min(150, max(-5, 40 + 10 * i)) for i in range(len(pairs))]
         self._reply(200, {"probs": probs, "model": "fake-copilot"})
@@ -164,11 +172,89 @@ def test_fallback_env_selects_nli(tmp_path, monkeypatch):
         VscodeLmBackend().entail_probs([("p", "h")])
 
 
-def test_direct_url_override(endpoint, monkeypatch):
+def _isolate_data_home(tmp_path, monkeypatch):
+    """Point every data-dir root at tmp so no real endpoint file leaks in."""
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg"))
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "local"))
+    monkeypatch.setenv("APPDATA", str(tmp_path / "roaming"))
+    monkeypatch.setenv("HOME", str(tmp_path))
+
+
+def test_direct_url_override(endpoint, tmp_path, monkeypatch):
+    _isolate_data_home(tmp_path, monkeypatch)
+    monkeypatch.delenv("POORDJAEVIN_VSCODE_LM_TOKEN", raising=False)
     monkeypatch.setenv("POORDJAEVIN_VSCODE_LM_ENDPOINT", endpoint)
     backend = VscodeLmBackend()
-    with pytest.raises(RuntimeError):  # URL override carries no token -> 401
+    with pytest.raises(RuntimeError):  # no token anywhere -> 401
         backend.entail_probs([("p", "h")])
+
+
+def test_direct_url_override_env_token(endpoint, tmp_path, monkeypatch):
+    _isolate_data_home(tmp_path, monkeypatch)
+    monkeypatch.setenv("POORDJAEVIN_VSCODE_LM_ENDPOINT", endpoint)
+    monkeypatch.setenv("POORDJAEVIN_VSCODE_LM_TOKEN", TOKEN)
+    backend = VscodeLmBackend()
+    assert backend.entail_probs([("p", "h")]) == [0.4]
+
+
+def test_direct_url_override_reuses_file_token(endpoint, tmp_path, monkeypatch):
+    _isolate_data_home(tmp_path, monkeypatch)
+    monkeypatch.delenv("POORDJAEVIN_VSCODE_LM_TOKEN", raising=False)
+    default = tmp_path / "xdg" / "poordjaevin" / "vscode-lm-endpoint.json"
+    default.parent.mkdir(parents=True)
+    default.write_text(json.dumps(
+        {"url": "http://127.0.0.1:1/score", "token": TOKEN}))
+    monkeypatch.setenv("POORDJAEVIN_VSCODE_LM_ENDPOINT", endpoint)
+    backend = VscodeLmBackend()
+    assert backend.entail_probs([("p", "h")]) == [0.4]
+
+
+def test_nonfinite_score_is_protocol_error(endpoint):
+    backend = VscodeLmBackend(fallback=_FakeFallback())
+    with pytest.raises(RuntimeError, match="non-finite"):
+        backend.entail_probs([("p", "nan"), ("p", "nan")])
+
+
+def test_fallback_reports_fallback_source(endpoint, tmp_path, monkeypatch):
+    class _NliLikeFallback(_FakeFallback):
+        confidence_source = "local_nli"
+
+    spec_env = os.environ["POORDJAEVIN_VSCODE_LM_ENDPOINT"]
+    fallback = _NliLikeFallback()
+    backend = VscodeLmBackend(fallback=fallback)
+    assert backend.confidence_source == "self_report"
+    backend.entail_probs([("p", "h")])
+    assert backend.confidence_source == "self_report"
+
+    backend._endpoint_override = str(tmp_path / "nada.json")
+    backend.entail_probs([("p", "h")])
+    assert backend.confidence_source == "local_nli"
+
+    backend._endpoint_override = spec_env
+    backend.entail_probs([("p", "h")])
+    assert backend.confidence_source == "self_report"
+
+
+def test_client_drops_calibration_when_source_changes(endpoint):
+    """A self_report-fitted temperature must not touch fallback probs."""
+    from poordjaevin.client import Client
+    from poordjaevin.primitives import Noul
+
+    class _NliLikeFallback(_FakeFallback):
+        confidence_source = "local_nli"
+
+    backend = VscodeLmBackend(fallback=_NliLikeFallback())
+    client = Client(backend=backend, temperature=0.125, abstain_threshold=0.9,
+                    calibrated_source="self_report")
+    # Endpoint answered with raw 0.4: temperature 0.125 sharpens it to ~0.96
+    # confidence in the "no" direction, above the abstain threshold.
+    ans = client.ask("state", {"q": Noul("is X")})["q"]
+    assert ans.value is False and ans.confidence > 0.9
+    # Fallback produced the probs: calibrated_source mismatch -> raw + no
+    # abstain, so the same request answers on the unmodified 0.99.
+    backend._endpoint_override = "http://127.0.0.1:1/score"
+    ans = client.ask("state", {"q": Noul("is X")})["q"]
+    assert ans.value is True and abs(ans.confidence - 0.99) < 1e-6
 
 
 def test_warmup_and_usage(endpoint):

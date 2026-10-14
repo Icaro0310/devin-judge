@@ -306,6 +306,7 @@ def build_client(calibrator_path: str | None = "calibration.json", backend=None)
         backend=selected_backend,
         temperature=temperature,
         abstain_threshold=abstain_threshold,
+        calibrated_source=source if calibration["backend"] else None,
     )
 
 
@@ -313,9 +314,11 @@ def build_server(calibrator_path: str | None = "calibration.json"):
     client = build_client(calibrator_path)
     server = _make_app("poordjaevin")
     # Proveniencia da confianca: "local_nli" ou "self_report" (acp) — o campo
-    # nunca finge ser probabilidade calibrada quando nao e.
-    confidence_source = getattr(
-        client._backend, "confidence_source", "local_nli")
+    # nunca finge ser probabilidade calibrada quando nao e. Lida por decisao:
+    # um backend pode mudar de producer entre requests (fallback vscode-lm).
+    def _confidence_source() -> str:
+        return getattr(
+            client._backend, "confidence_source", "local_nli")
 
     # Monitor de quota: o backend ACP expoe last_cost/model por turno; no
     # backend local ficam None e os campos saem como dados (NULL no log).
@@ -348,7 +351,7 @@ def build_server(calibrator_path: str | None = "calibration.json"):
             "p_yes": p_yes,
             "p_no": round(1 - p_yes, 4),
             "confidence": ans["confidence"],
-            "confidence_source": confidence_source,
+            "confidence_source": _confidence_source(),
             "low_confidence": low_conf,
             "verdict": noul_verdict(p_yes, low_conf),
         }
@@ -373,7 +376,7 @@ def build_server(calibrator_path: str | None = "calibration.json"):
             "choice": ans["value"],
             "distribution": ans["probs"],
             "confidence": ans["confidence"],
-            "confidence_source": confidence_source,
+            "confidence_source": _confidence_source(),
             "low_confidence": low_conf,
             "verdict": dist_verdict(low_conf),
         }
@@ -402,7 +405,7 @@ def build_server(calibrator_path: str | None = "calibration.json"):
             "score": ans["score"],
             "distribution": ans["distribution"],
             "confidence": ans["confidence"],
-            "confidence_source": confidence_source,
+            "confidence_source": _confidence_source(),
             "low_confidence": low_conf,
             "verdict": dist_verdict(low_conf),
         }
@@ -478,7 +481,7 @@ def build_server(calibrator_path: str | None = "calibration.json"):
             "risk": risk["choice"],
             "distribution": risk["distribution"],
             "confidence": risk["confidence"],
-            "confidence_source": confidence_source,
+            "confidence_source": _confidence_source(),
             "low_confidence": low_conf,
             "verdict": dist_verdict(low_conf),
             "advisory": True,

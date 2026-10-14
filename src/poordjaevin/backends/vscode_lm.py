@@ -13,7 +13,9 @@ platform data dir (same root as ``djaevin_log.db``) holding
 ``{"url": "http://127.0.0.1:<port>/<path>", "token": "..."}``. The file is
 re-read on every request, so an extension restart on a new port is picked
 up for free. ``POORDJAEVIN_VSCODE_LM_ENDPOINT`` overrides it: either a path
-to an endpoint file or a direct ``http(s)://`` URL (dev/testing, no token).
+to an endpoint file or a direct ``http(s)://`` URL. A URL override still
+needs the bearer token: ``POORDJAEVIN_VSCODE_LM_TOKEN`` supplies it, else
+the token from the default endpoint file is reused when readable.
 
 Scoring protocol mirrors the ACP bridge: POST ``{"pairs": [[p, h], ...]}``
 -> ``{"probs": [0-100...], "model": "..."}``; ``{"warmup": true}`` ->
@@ -30,6 +32,7 @@ unavailability is eligible for ``POORDJAEVIN_VSCODE_LM_FALLBACK=nli``.
 
 Env:
     POORDJAEVIN_VSCODE_LM_ENDPOINT  endpoint file path or http(s):// URL
+    POORDJAEVIN_VSCODE_LM_TOKEN     bearer token for a direct URL override
     POORDJAEVIN_VSCODE_LM_TIMEOUT   seconds per request (default 120)
     POORDJAEVIN_VSCODE_LM_FALLBACK  "nli" routes unavailability to the local
                                   NLI backend (default: errors propagate)
@@ -40,6 +43,7 @@ Stdlib only. The extension is the moving part, not this file.
 from __future__ import annotations
 
 import json
+import math
 import os
 import sys
 import urllib.error
@@ -47,6 +51,7 @@ import urllib.request
 from pathlib import Path
 
 ENV_ENDPOINT = "POORDJAEVIN_VSCODE_LM_ENDPOINT"
+ENV_TOKEN = "POORDJAEVIN_VSCODE_LM_TOKEN"
 ENV_TIMEOUT = "POORDJAEVIN_VSCODE_LM_TIMEOUT"
 ENV_FALLBACK = "POORDJAEVIN_VSCODE_LM_FALLBACK"
 
@@ -92,14 +97,29 @@ class VscodeLmBackend:
         self.requests = 0
         self.fallback_requests = 0
         self.model: str | None = None
+        # Reflects the producer of the most recent entail_probs batch:
+        # "self_report" when the extension endpoint answered, the fallback
+        # backend's own source when it absorbed an unavailability error.
+        self.confidence_source = "self_report"
 
     # -- endpoint discovery + transport ----------------------------------- #
+
+    def _token_from_file(self, path: str) -> str | None:
+        try:
+            with open(path, encoding="utf-8") as f:
+                token = json.load(f).get("token")
+        except (OSError, ValueError):
+            return None
+        return token if isinstance(token, str) and token else None
 
     def _resolve_endpoint(self) -> tuple[str, str | None]:
         """Return (url, token). Unavailable when nothing can be resolved."""
         source = self._endpoint_override or _default_endpoint_file()
         if source.startswith(("http://", "https://")):
-            return source, None
+            # Direct URL: token comes from the env or the default file.
+            token = (os.environ.get(ENV_TOKEN)
+                     or self._token_from_file(_default_endpoint_file()))
+            return source, token
         try:
             with open(source, encoding="utf-8") as f:
                 spec = json.load(f)
@@ -173,6 +193,9 @@ class VscodeLmBackend:
         if fallback is None:
             raise error
         self.fallback_requests += 1
+        # These probs come from another producer: report its source so the
+        # calibration layer does not apply a temperature fitted for this one.
+        self.confidence_source = getattr(fallback, "confidence_source", "unknown")
         return fallback.entail_probs(pairs)
 
     # -- poordjaevin backend contract --------------------------------------- #
@@ -186,6 +209,7 @@ class VscodeLmBackend:
         except VscodeLmUnavailable as error:
             return self._unavailable_or_fallback(pairs, error)
         self.requests += 1
+        self.confidence_source = "self_report"
         self.model = msg.get("model") or self.model
         probs = msg.get("probs")
         if not isinstance(probs, list) or len(probs) != len(pairs):
@@ -197,6 +221,9 @@ class VscodeLmBackend:
             if not isinstance(p, (int, float)) or isinstance(p, bool):
                 raise RuntimeError(  # noqa: TRY004
                     "VS Code LM endpoint returned a non-numeric score")
+            if not math.isfinite(float(p)):
+                raise RuntimeError(
+                    "VS Code LM endpoint returned a non-finite score")
             out.append(max(0.0, min(1.0, float(p) / 100.0)))
         return out
 
