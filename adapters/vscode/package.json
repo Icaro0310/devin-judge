@@ -21,6 +21,12 @@
   "activationEvents": [
     "onStartupFinished"
   ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true,
+      "description": "Devin Judge sends text to the VS Code language model and serves a localhost endpoint; it does not execute or modify workspace code."
+    }
+  },
   "main": "./out/adapters/vscode/extension.js",
   "contributes": {
     "commands": [

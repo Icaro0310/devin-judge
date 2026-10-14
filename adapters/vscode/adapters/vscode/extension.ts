@@ -30,7 +30,6 @@ import { startScoreServer } from './server.ts';
 import type { RunningEndpoint } from './server.ts';
 
 const EXTENSION_ID = 'icaro0310.devin-judge';
-const VERSION = '0.1.0';
 const SLASH_COMMANDS = ['judge', 'classify', 'rate', 'gate', 'decide'] as const;
 
 // Held for deactivate(): the listening endpoint and its discovery file.
@@ -40,6 +39,7 @@ let advertisedFile: string | null = null;
 export function activate(context: vscode.ExtensionContext): Promise<void> {
   const output = vscode.window.createOutputChannel('Devin Judge');
   context.subscriptions.push(output);
+  const version = String(context.extension.packageJSON.version ?? '0.0.0');
 
   const getConfig = (): vscode.WorkspaceConfiguration =>
     vscode.workspace.getConfiguration('devin-judge');
@@ -114,7 +114,7 @@ export function activate(context: vscode.ExtensionContext): Promise<void> {
         token,
         pid: process.pid,
         extension: EXTENSION_ID,
-        version: VERSION,
+        version,
       });
       advertisedFile = file;
       output.appendLine(

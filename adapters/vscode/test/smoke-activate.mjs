@@ -16,7 +16,10 @@ const vscode = await import('vscode');
 const ext = await import('../out/adapters/vscode/extension.js');
 
 const subscriptions = [];
-await ext.activate({ subscriptions });
+await ext.activate({
+  subscriptions,
+  extension: { packageJSON: { version: '0.0.0-smoke' } },
+});
 const r = vscode.registered;
 
 assert.deepEqual(
