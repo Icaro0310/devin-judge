@@ -49,13 +49,22 @@ export function endpointFilePath(opts: EndpointEnv = {}): string {
   return path.join(base, 'poordjaevin', 'vscode-lm-endpoint.json');
 }
 
-/** Write the endpoint spec atomically: a randomly-named sibling temp file
- *  created O_EXCL with mode 0o600, then renamed over the target. The token
- *  only ever exists in a file that was born 0o600, on every filesystem;
- *  a permissive stale file or a symlink at the discovery path is replaced
- *  by the real file rather than followed or extended, and a pre-planted
- *  file at the temp path is impossible because the name is unguessable and
- *  O_EXCL would refuse it anyway. No dependence on chmod working. */
+/** Write the endpoint spec atomically, designed against three concrete
+ *  failure classes found in review:
+ *
+ *  1. Permissive overwrite window — writing token bytes into an existing
+ *     0o644 file before chmod lands exposes the credential. Fixed by never
+ *     writing to the final path: the token only ever lives in a file that
+ *     was created O_EXCL with mode 0o600, then rename(2) swaps the path
+ *     atomically. There is no state where a permissive file holds a token.
+ *  2. Discovery-path symlink — a symlinked target would be followed and
+ *     the token written elsewhere. rename() replaces the symlink itself
+ *     with the real file; the target is never opened.
+ *  3. Predictable temp path — a `tmp-<pid>` name could be pre-planted as a
+ *     symlink or permissive file. The temp name is crypto-random and
+ *     opened 'wx' (O_EXCL): it can never follow or extend an existing
+ *     path, on any filesystem, with no dependence on chmod working.
+ */
 export function writeEndpointFile(file: string, spec: EndpointSpec): void {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const tmp = `${file}.tmp-${crypto.randomBytes(6).toString('hex')}`;

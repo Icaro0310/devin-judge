@@ -106,7 +106,9 @@ class VscodeLmBackend:
 
     def _token_from_file(self, path: str, for_url: str) -> str | None:
         """Token for ``for_url`` only: a bearer credential never travels to a
-        server different from the one that issued it."""
+        server different from the one that issued it. The file's URL must
+        match the override exactly — a mismatched spec yields no token, and
+        a malformed file is ignored rather than blocking the request."""
         try:
             with open(path, encoding="utf-8") as f:
                 spec = json.load(f)
