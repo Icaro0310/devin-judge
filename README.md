@@ -205,7 +205,9 @@ The agent then has these local tools:
 Why this beats asking an LLM to judge: on the default NLI backend it is local
 (private), free (no tokens), fast, and the confidence is calibrated instead of
 made up. On `acp` or `vscode-lm` your scoring text goes to whichever model
-provider you picked; the confidence is still calibrated, just no longer local.
+provider you picked; the confidence stays honestly labeled via
+`confidence_source`, calibrated when a matching calibrator is loaded and raw
+otherwise.
 
 ### Gate your commits (pre-commit hook)
 
@@ -241,7 +243,7 @@ default, or `POORDJAEVIN_BACKEND=nli` with the `local` extra installed.
 
 Most production AI work is not chat. It is fast structured decisions: **route** a ticket, **classify** an intent, **score** a sentiment, **extract** a field, **gate** a tool call. TypeSafe's **Jev** named this category ("System One" models) and nailed the thesis — and, per the independent [cross-system benchmark](crossbench/) below, it currently backs its calibration claims up: it's the strongest model measured here. It's also closed, hosted, and behind a waitlist.
 
-poordjaevin exists for the deployments where "call a hosted API" isn't the answer: private data, offline environments, zero marginal cost, no waitlist. It reproduces Jev's typed-decision interface on a small local model and proves its **own** calibration honestly (5-fold cross-validated, never graded on what it was fit on). Against the other open local alternatives it leads on the mixed decision-primitive benchmark below, but not on the high-cardinality one — see the real breakdown. It does not beat Jev. That's the honest trade for fully local and free on the NLI backend.
+poordjaevin exists for the deployments where "call a hosted API" isn't the answer: private data, offline environments, zero marginal cost, no waitlist. It reproduces Jev's typed-decision interface on a small local model and proves its **own** calibration honestly (5-fold cross-validated, never graded on what it was fit on). Against the other open local alternatives it leads on the mixed decision-primitive benchmark below, but not on the high-cardinality one, see the real breakdown. It does not beat Jev. That's the honest trade for fully local and free on the NLI backend.
 
 ## poordjaevin vs the field
 

@@ -65,7 +65,12 @@ export function writeEndpointFile(file: string, spec: EndpointSpec): void {
   }
   const fd = fs.openSync(file, 'w', 0o600);
   try {
-    fs.fchmodSync(fd, 0o600);
+    try {
+      fs.fchmodSync(fd, 0o600);
+    } catch {
+      // Filesystems without POSIX modes have no permission window to race;
+      // the mode request at open is the best available there.
+    }
     fs.writeSync(fd, `${JSON.stringify(spec)}\n`, null, 'utf8');
   } finally {
     fs.closeSync(fd);

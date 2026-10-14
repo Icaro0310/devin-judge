@@ -104,21 +104,29 @@ class VscodeLmBackend:
 
     # -- endpoint discovery + transport ----------------------------------- #
 
-    def _token_from_file(self, path: str) -> str | None:
+    def _token_from_file(self, path: str, for_url: str) -> str | None:
+        """Token for ``for_url`` only: a bearer credential never travels to a
+        server different from the one that issued it."""
         try:
             with open(path, encoding="utf-8") as f:
-                token = json.load(f).get("token")
+                spec = json.load(f)
         except (OSError, ValueError):
             return None
+        if not isinstance(spec, dict):
+            return None
+        if str(spec.get("url", "")).rstrip("/") != for_url.rstrip("/"):
+            return None
+        token = spec.get("token")
         return token if isinstance(token, str) and token else None
 
     def _resolve_endpoint(self) -> tuple[str, str | None]:
         """Return (url, token). Unavailable when nothing can be resolved."""
         source = self._endpoint_override or _default_endpoint_file()
         if source.startswith(("http://", "https://")):
-            # Direct URL: token comes from the env or the default file.
+            # Direct URL: token comes from the env, or from the default file
+            # only when it points at this same endpoint.
             token = (os.environ.get(ENV_TOKEN)
-                     or self._token_from_file(_default_endpoint_file()))
+                     or self._token_from_file(_default_endpoint_file(), source))
             return source, token
         try:
             with open(source, encoding="utf-8") as f:

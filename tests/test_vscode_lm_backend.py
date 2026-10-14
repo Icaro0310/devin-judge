@@ -202,11 +202,37 @@ def test_direct_url_override_reuses_file_token(endpoint, tmp_path, monkeypatch):
     monkeypatch.delenv("POORDJAEVIN_VSCODE_LM_TOKEN", raising=False)
     default = tmp_path / "xdg" / "poordjaevin" / "vscode-lm-endpoint.json"
     default.parent.mkdir(parents=True)
-    default.write_text(json.dumps(
-        {"url": "http://127.0.0.1:1/score", "token": TOKEN}))
+    default.write_text(json.dumps({"url": endpoint, "token": TOKEN}))
     monkeypatch.setenv("POORDJAEVIN_VSCODE_LM_ENDPOINT", endpoint)
     backend = VscodeLmBackend()
     assert backend.entail_probs([("p", "h")]) == [0.4]
+
+
+def test_file_token_never_sent_to_a_different_url(endpoint, tmp_path, monkeypatch):
+    """The file's bearer must not leak to an unrelated override server."""
+    _isolate_data_home(tmp_path, monkeypatch)
+    monkeypatch.delenv("POORDJAEVIN_VSCODE_LM_TOKEN", raising=False)
+    default = tmp_path / "xdg" / "poordjaevin" / "vscode-lm-endpoint.json"
+    default.parent.mkdir(parents=True)
+    default.write_text(json.dumps(
+        {"url": "http://127.0.0.1:9/other", "token": TOKEN}))
+    monkeypatch.setenv("POORDJAEVIN_VSCODE_LM_ENDPOINT", endpoint)
+    backend = VscodeLmBackend()
+    with pytest.raises(RuntimeError, match="HTTP 401"):
+        backend.entail_probs([("p", "h")])
+
+
+def test_malformed_default_file_does_not_block_url_override(
+        endpoint, tmp_path, monkeypatch):
+    _isolate_data_home(tmp_path, monkeypatch)
+    monkeypatch.delenv("POORDJAEVIN_VSCODE_LM_TOKEN", raising=False)
+    default = tmp_path / "xdg" / "poordjaevin" / "vscode-lm-endpoint.json"
+    default.parent.mkdir(parents=True)
+    default.write_text("[1, 2, 3]")  # valid JSON, not an object
+    monkeypatch.setenv("POORDJAEVIN_VSCODE_LM_ENDPOINT", endpoint)
+    backend = VscodeLmBackend()
+    with pytest.raises(RuntimeError, match="HTTP 401"):
+        backend.entail_probs([("p", "h")])
 
 
 def test_nonfinite_score_is_protocol_error(endpoint):
