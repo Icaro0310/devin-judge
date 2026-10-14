@@ -9,6 +9,7 @@
  * Pure: node:fs/node:os/node:path only, no vscode.
  */
 
+import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -48,19 +49,23 @@ export function endpointFilePath(opts: EndpointEnv = {}): string {
   return path.join(base, 'poordjaevin', 'vscode-lm-endpoint.json');
 }
 
-/** Write the endpoint spec atomically: a sibling temp file created with
- *  mode 0o600, then renamed over the target. The token only ever exists in
- *  a file that was born 0o600, on every filesystem; a permissive stale file
- *  or a symlink at the discovery path is replaced by the real file rather
- *  than followed or extended. No dependence on chmod working. */
+/** Write the endpoint spec atomically: a randomly-named sibling temp file
+ *  created O_EXCL with mode 0o600, then renamed over the target. The token
+ *  only ever exists in a file that was born 0o600, on every filesystem;
+ *  a permissive stale file or a symlink at the discovery path is replaced
+ *  by the real file rather than followed or extended, and a pre-planted
+ *  file at the temp path is impossible because the name is unguessable and
+ *  O_EXCL would refuse it anyway. No dependence on chmod working. */
 export function writeEndpointFile(file: string, spec: EndpointSpec): void {
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  const tmp = `${file}.tmp-${process.pid}`;
+  const tmp = `${file}.tmp-${crypto.randomBytes(6).toString('hex')}`;
+  const fd = fs.openSync(tmp, 'wx', 0o600);
   try {
-    fs.writeFileSync(tmp, `${JSON.stringify(spec)}\n`, {
-      encoding: 'utf8',
-      mode: 0o600,
-    });
+    try {
+      fs.writeSync(fd, `${JSON.stringify(spec)}\n`, null, 'utf8');
+    } finally {
+      fs.closeSync(fd);
+    }
     fs.renameSync(tmp, file);
   } finally {
     try {
