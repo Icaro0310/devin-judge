@@ -7,6 +7,8 @@ import pytest
 
 from poordjaevin import Client
 from poordjaevin.mcp_server import (
+    _SELF_ASSESSMENT_HYPOTHESIS,
+    _judge_inputs,
     do_classify,
     do_decide,
     do_gate,
@@ -41,6 +43,60 @@ def test_judge_returns_bool_and_prob():
     out = do_judge(client, "cancel my account now", "The customer wants to cancel.")
     assert out["value"] is True
     assert out["prob_true"] == 0.9
+
+
+def test_judge_inputs_with_context_is_premise_weighed():
+    premise, hypothesis, uncalibrated = _judge_inputs(
+        "the deploy is safe", "the rollout log is clean")
+    assert (premise, hypothesis, uncalibrated) == (
+        "the rollout log is clean", "the deploy is safe", False)
+
+
+def test_judge_inputs_without_context_is_flagged_self_assessment():
+    # An (instruction, claim) pair is not a well-formed entailment
+    # question: no premise entails a proposition. Without context the only
+    # honest pair is the statement's own self-assessment.
+    premise, hypothesis, uncalibrated = _judge_inputs("the sky is blue", "")
+    assert (premise, hypothesis, uncalibrated) == (
+        "the sky is blue", _SELF_ASSESSMENT_HYPOTHESIS, True)
+    # whitespace-only context counts as no context
+    assert _judge_inputs("s", "  \n ") == (
+        "s", _SELF_ASSESSMENT_HYPOTHESIS, True)
+
+
+def test_uncalibrated_judge_logs_and_thresholds_as_self_assessment(
+        tmp_path, monkeypatch):
+    """Context-free judge is a different question shape: it logs under
+    judge_self_assessment so corrections never enter the judge few-shot
+    pool, and it consults the judge_self_assessment low-confidence
+    threshold so djaevin_calibrate's per-tool suggestions actually apply.
+    """
+    import asyncio
+    import json
+    import sqlite3
+
+    from poordjaevin import mcp_server
+
+    monkeypatch.setenv("POORDJAEVIN_LOG_DB", str(tmp_path / "djaevin_log.db"))
+    # A "judge" threshold that would NOT flag confidence 0.5, vs a
+    # self-assessment threshold that does — proves which name is read.
+    monkeypatch.setitem(mcp_server.LOW_CONFIDENCE_THRESHOLDS, "judge", 0.0)
+    monkeypatch.setitem(
+        mcp_server.LOW_CONFIDENCE_THRESHOLDS, "judge_self_assessment", 0.9)
+    monkeypatch.setattr(
+        mcp_server, "build_client",
+        lambda *a, **k: Client(backend=ScriptedBackend([0.5])))
+
+    server = mcp_server.build_server()
+    result = asyncio.run(server.call_tool("decide", {"questions": [
+        {"id": "j", "type": "judge", "statement": "the sky is blue"}]}))
+    answer = json.loads(result.content[0].text)["answers"][0]
+    assert answer["uncalibrated"] is True
+    assert answer["low_confidence"] is True
+
+    rows = sqlite3.connect(tmp_path / "djaevin_log.db").execute(
+        "SELECT tool FROM djaevin_decisions").fetchall()
+    assert [r[0] for r in rows] == ["judge_self_assessment"]
 
 
 def test_rate_returns_level_and_score():

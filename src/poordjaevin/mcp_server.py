@@ -85,8 +85,24 @@ def _low_conf(tool: str, confidence: float) -> bool:
     return confidence < LOW_CONFIDENCE_THRESHOLDS.get(
         tool, LOW_CONFIDENCE_THRESHOLD)
 
-# Premissa neutra quando judge e chamado sem contexto.
-_JUDGE_PREMISE = "Decide whether the statement is true."
+# Hipotese usada quando judge e chamado sem contexto: a unica pergunta de
+# entailment bem formada que resta e a auto-avaliacao do proprio statement —
+# (statement, "the statement is true."). O resultado sai marcado
+# `uncalibrated` para nunca ser lido como medicao.
+_SELF_ASSESSMENT_HYPOTHESIS = "the statement is true."
+
+
+def _judge_inputs(statement: str, context: str) -> tuple[str, str, bool]:
+    """Resolve (premise, hypothesis, uncalibrated) for a judge call.
+
+    An (instruction, claim) pair — the old no-context default — is not a
+    well-formed entailment question: no premise entails a proposition, so
+    the model's score is noise rendered as a verdict. Without context the
+    only honest thing to ask is the statement's self-assessment, flagged.
+    """
+    if context.strip():
+        return context, statement, False
+    return statement, _SELF_ASSESSMENT_HYPOTHESIS, True
 
 GATE_RISK_LEVELS = ["low", "medium", "high"]
 
@@ -337,15 +353,22 @@ def build_server(calibrator_path: str | None = "calibration.json"):
     # `record=True`: a decisao sai para o chamador — loga e injeta few-shot.
     # `record=False`: sub-pergunta interna (ex.: checks do gate) — nao loga.
     def _judge(statement: str, context: str = "", record: bool = True) -> dict:
-        premise = context or _JUDGE_PREMISE
-        if record:
+        premise, hypothesis, uncalibrated = _judge_inputs(statement, context)
+        # Few-shot examples encode premise-weighed judging; they do not
+        # transfer to the self-assessment question shape.
+        if record and not uncalibrated:
             premise = djaevin_log.few_shot_block("judge", statement) + premise
         try:
-            ans = do_judge(client, premise, statement)
+            ans = do_judge(client, premise, hypothesis)
         except Exception as error:  # noqa: BLE001 - tool boundary must not raise
             return _err(error)
+        # Self-assessment answers use a different question shape — they log
+        # and threshold under "judge_self_assessment" so djaevin_calibrate's
+        # per-tool suggestions actually apply and they never enter the
+        # "judge" few-shot pool.
+        tool = "judge_self_assessment" if uncalibrated else "judge"
         p_yes = ans["prob_true"]
-        low_conf = _low_conf("judge", ans["confidence"])
+        low_conf = _low_conf(tool, ans["confidence"])
         out = {
             "answer": "yes" if ans["value"] is True else "no",
             "p_yes": p_yes,
@@ -354,11 +377,13 @@ def build_server(calibrator_path: str | None = "calibration.json"):
             "confidence_source": _confidence_source(),
             "low_confidence": low_conf,
             "verdict": noul_verdict(p_yes, low_conf),
+            "uncalibrated": uncalibrated,
+            "basis": "self-assessment only" if uncalibrated else "premise",
         }
         if record:
             out.update(_usage_fields())
             out["decision_id"] = _log(
-                "judge", statement, out["answer"],
+                tool, statement, out["answer"],
                 out["confidence"], out["low_confidence"])
         return out
 
