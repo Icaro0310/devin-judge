@@ -1,0 +1,128 @@
+{
+  "name": "devin-judge",
+  "displayName": "Devin Judge",
+  "publisher": "icaro0310",
+  "version": "0.1.2",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Icaro0310/devin-judge",
+    "directory": "adapters/vscode"
+  },
+  "description": "Calibrated decisions (judge/classify/rate/gate/decide) on the chat model VS Code is already serving, plus a localhost scoring endpoint for poordjaevin.",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/adapters/vscode/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "devin-judge.judge",
+        "title": "Devin Judge: Judge"
+      },
+      {
+        "command": "devin-judge.classify",
+        "title": "Devin Judge: Classify"
+      },
+      {
+        "command": "devin-judge.rate",
+        "title": "Devin Judge: Rate"
+      },
+      {
+        "command": "devin-judge.gate",
+        "title": "Devin Judge: Gate"
+      },
+      {
+        "command": "devin-judge.decide",
+        "title": "Devin Judge: Decide"
+      }
+    ],
+    "chatParticipants": [
+      {
+        "id": "devin-judge.judge",
+        "fullName": "Devin Judge",
+        "name": "judge",
+        "description": "Calibrated decisions (judge/classify/rate/gate/decide) on the model VS Code is serving",
+        "isSticky": false,
+        "commands": [
+          {
+            "name": "judge",
+            "description": "Yes/no opinion on a statement: @judge /judge <statement>"
+          },
+          {
+            "name": "classify",
+            "description": "Pick one option: @judge /classify <text> | <option> | <option> | ..."
+          },
+          {
+            "name": "rate",
+            "description": "Rate on a scale: @judge /rate <text> | 1-5 or <level1,level2,...>"
+          },
+          {
+            "name": "gate",
+            "description": "Advisory risk gate on an action: @judge /gate <action>"
+          },
+          {
+            "name": "decide",
+            "description": "Batch typed questions: @judge /decide {\"state\": \"...\", \"questions\": {...}}"
+          }
+        ]
+      }
+    ],
+    "configuration": {
+      "title": "Devin Judge",
+      "properties": {
+        "devin-judge.calibratorPath": {
+          "type": "string",
+          "default": "calibration.json",
+          "description": "Path to a poordjaevin calibration file ({temperature, abstain_threshold, backend}); relative paths resolve against the first workspace folder.",
+          "scope": "resource"
+        },
+        "devin-judge.model.vendor": {
+          "type": "string",
+          "default": "",
+          "description": "Optional chat-model vendor filter for vscode.lm.selectChatModels (e.g. \"copilot\"). Empty = any.",
+          "scope": "resource"
+        },
+        "devin-judge.model.family": {
+          "type": "string",
+          "default": "",
+          "description": "Optional chat-model family filter for vscode.lm.selectChatModels (e.g. \"gpt-4o\"). Empty = any.",
+          "scope": "resource"
+        },
+        "devin-judge.model.id": {
+          "type": "string",
+          "default": "",
+          "description": "Optional chat-model id filter for vscode.lm.selectChatModels. Empty = any.",
+          "scope": "resource"
+        },
+        "devin-judge.endpoint.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Serve the localhost scoring endpoint (127.0.0.1, bearer token) that poordjaevin's vscode-lm backend POSTs to.",
+          "scope": "resource"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "test": "node --test test/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json",
+    "smoke": "node --import ./test/vscode-loader-import.mjs test/smoke-activate.mjs",
+    "vscode:package": "vsce package --no-dependencies -o devin-judge.vsix"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/vscode": "^1.100.0",
+    "@vscode/vsce": "^3.9.2",
+    "typescript": "^5.6.0"
+  }
+}

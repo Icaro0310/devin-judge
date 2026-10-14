@@ -152,16 +152,26 @@ Backend selection and tuning, all optional:
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `POORDJAEVIN_BACKEND` | `acp` | `acp` = Devin's model via ACP, `nli` = fully offline local model |
+| `POORDJAEVIN_BACKEND` | `acp` | `acp` = Devin's model via ACP, `vscode-lm` = VS Code's model via the LM API, `nli` = fully offline local model |
 | `POORDJAEVIN_ACP_MODEL` | auto | pin a specific Devin model instead of automatic rotation |
 | `POORDJAEVIN_ACP_TIMEOUT` | `120` | seconds per decision round trip |
 | `POORDJAEVIN_ACP_MAX_COST` | unset | fail closed when cumulative ACP cost exceeds this budget |
+| `POORDJAEVIN_VSCODE_LM_ENDPOINT` | auto | endpoint file path or direct `http(s)://` URL override |
+| `POORDJAEVIN_VSCODE_LM_TIMEOUT` | `120` | seconds per request to the extension endpoint |
+| `POORDJAEVIN_VSCODE_LM_FALLBACK` | unset | `nli` = fall back to the local model when the extension is unavailable |
 | `POORDJAEVIN_ABSTAIN` | `off` | `on` = abstain below the calibrated threshold instead of answering |
 
-Honesty note: with `acp` the confidence is `self_report` (the model's own
-stated probability, temperature-adjusted), not NLI logprobs. Every tool
-response carries a `confidence_source` field so callers never mistake one for
-the other, and `model`/`cost` are logged per call for quota monitoring.
+Honesty note: with `acp` and `vscode-lm` the confidence is `self_report` (the
+model's own stated probability, temperature-adjusted), not NLI logprobs. Every
+tool response carries a `confidence_source` field so callers never mistake one
+for the other, and `model`/`cost` are logged per call for quota monitoring.
+
+The `vscode-lm` backend scores through whichever chat model VS Code is
+serving (Copilot, Codex, BYOK). `vscode.lm` only exists inside the extension
+host, so the `icaro0310.devin-judge` extension serves a small localhost
+endpoint and advertises it via `vscode-lm-endpoint.json` in the platform data
+dir (next to `djaevin_log.db`). If the extension is not running the backend
+fails closed, or falls back to `nli` when `POORDJAEVIN_VSCODE_LM_FALLBACK=nli`.
 
 No Devin on the machine? Use the offline path:
 
@@ -308,6 +318,7 @@ state + typed questions
 
 - **Local NLI backend (fully offline):** one small natural-language-inference model scores every option as an entailment hypothesis, in a single batched forward pass. Fully offline after a one-time ~400MB download. No key, no vendor, your text never leaves your machine. This is the backend used by `poordjaevin eval` / `calibrate` and by `Client()` in Python; select it for `serve` with `POORDJAEVIN_BACKEND=nli`.
 - **Devin ACP backend (default for `poordjaevin serve`):** routes scoring through `devin acp`, so decisions use the model your Devin plan already provides, with automatic rotation and per-call cost reporting. No extra model, no extra key.
+- **VS Code LM backend:** routes scoring through `vscode.lm` inside the `icaro0310.devin-judge` extension, so decisions use whichever chat model VS Code is already serving (Copilot, Codex, BYOK), with no extra key. Select it with `POORDJAEVIN_BACKEND=vscode-lm`.
 - **Calibration (the moat):** temperature scaling fits one scalar so predicted confidence matches real accuracy; conformal thresholding turns a target risk budget into an "I don't know, escalate" signal. Calibration is backend-specific: a calibrator fitted on the NLI backend is not applied to ACP scores (the server warns and falls back to raw confidence on a mismatch).
 
 ## Benchmarks

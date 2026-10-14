@@ -267,18 +267,24 @@ def _select_backend():
 
     "acp" (default) scores through Devin's own ACP session — the model already
     available to the Devin CLI, with automatic rotation, no extra install and
-    no API key beyond the Devin credentials. "nli" uses the fully offline
-    local NLI backend, which lazily needs the 'local' extra
-    (torch + transformers, ~400MB model download on first run).
+    no API key beyond the Devin credentials. "vscode-lm" scores through the
+    VS Code Language Model API via the icaro0310.devin-judge extension's
+    localhost endpoint (Copilot, Codex or BYOK, whichever VS Code is serving).
+    "nli" uses the fully offline local NLI backend, which lazily needs the
+    'local' extra (torch + transformers, ~400MB model download on first run).
     """
     name = os.environ.get("POORDJAEVIN_BACKEND", "acp").lower()
     if name == "acp":
         from .backends.acp_devin import AcpDevinBackend
         return AcpDevinBackend()
+    if name in ("vscode-lm", "vscode", "lm"):
+        from .backends.vscode_lm import VscodeLmBackend
+        return VscodeLmBackend()
     if name == "nli":
         return None  # Client lazily builds LocalNLIBackend
     raise ValueError(
-        f"unknown POORDJAEVIN_BACKEND: {name!r} (expected 'acp' or 'nli')")
+        f"unknown POORDJAEVIN_BACKEND: {name!r} "
+        "(expected 'acp', 'vscode-lm' or 'nli')")
 
 
 def build_client(calibrator_path: str | None = "calibration.json", backend=None) -> Client:
