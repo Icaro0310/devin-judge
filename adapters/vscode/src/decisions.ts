@@ -24,7 +24,11 @@ import type { Pair } from './scoring.ts';
 // ---------------------------------------------------------------------------
 
 export const DEFAULT_TEMPLATE = 'This example is {}.';
-export const JUDGE_PREMISE = 'Decide whether the statement is true.';
+// Hypothesis used when judge is called with no premise at all: the only
+// well-formed entailment question left is the statement's own
+// self-assessment — (statement, "the statement is true."). Callers flag
+// the result `uncalibrated` so it is never read as a measurement.
+export const SELF_ASSESSMENT_HYPOTHESIS = 'the statement is true.';
 export const DEFAULT_GATE_CHECKS: Record<string, string> = {
   moves_money: 'This action moves, sends, or refunds money.',
   deletes_data: 'This action deletes or destroys data.',
@@ -631,6 +635,11 @@ export interface JudgeToolResult {
   confidence_source: string;
   low_confidence: boolean;
   verdict: string;
+  /** True when no premise was supplied: the score is the statement's
+   *  self-assessment, not an entailment measurement. */
+  uncalibrated: boolean;
+  /** What the score is weighed against: 'premise' or 'self-assessment only'. */
+  basis: string;
 }
 
 export async function judgeTool(
@@ -639,8 +648,10 @@ export async function judgeTool(
   context = '',
   lowConfidenceThreshold = LOW_CONFIDENCE_THRESHOLD,
 ): Promise<JudgeToolResult> {
-  const premise = context || JUDGE_PREMISE;
-  const ans = await doJudge(client, premise, statement);
+  const uncalibrated = context.trim() === '';
+  const ans = uncalibrated
+    ? await doJudge(client, statement, SELF_ASSESSMENT_HYPOTHESIS)
+    : await doJudge(client, context, statement);
   const pYes = ans.prob_true;
   const lowConf = ans.confidence < lowConfidenceThreshold;
   return {
@@ -651,6 +662,8 @@ export async function judgeTool(
     confidence_source: CONFIDENCE_SOURCE,
     low_confidence: lowConf,
     verdict: noulVerdict(pYes, lowConf),
+    uncalibrated,
+    basis: uncalibrated ? 'self-assessment only' : 'premise',
   };
 }
 

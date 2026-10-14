@@ -7,6 +7,8 @@ import pytest
 
 from poordjaevin import Client
 from poordjaevin.mcp_server import (
+    _SELF_ASSESSMENT_HYPOTHESIS,
+    _judge_inputs,
     do_classify,
     do_decide,
     do_gate,
@@ -41,6 +43,25 @@ def test_judge_returns_bool_and_prob():
     out = do_judge(client, "cancel my account now", "The customer wants to cancel.")
     assert out["value"] is True
     assert out["prob_true"] == 0.9
+
+
+def test_judge_inputs_with_context_is_premise_weighed():
+    premise, hypothesis, uncalibrated = _judge_inputs(
+        "the deploy is safe", "the rollout log is clean")
+    assert (premise, hypothesis, uncalibrated) == (
+        "the rollout log is clean", "the deploy is safe", False)
+
+
+def test_judge_inputs_without_context_is_flagged_self_assessment():
+    # An (instruction, claim) pair is not a well-formed entailment
+    # question: no premise entails a proposition. Without context the only
+    # honest pair is the statement's own self-assessment.
+    premise, hypothesis, uncalibrated = _judge_inputs("the sky is blue", "")
+    assert (premise, hypothesis, uncalibrated) == (
+        "the sky is blue", _SELF_ASSESSMENT_HYPOTHESIS, True)
+    # whitespace-only context counts as no context
+    assert _judge_inputs("s", "  \n ") == (
+        "s", _SELF_ASSESSMENT_HYPOTHESIS, True)
 
 
 def test_rate_returns_level_and_score():

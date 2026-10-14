@@ -21,7 +21,7 @@ import type {
 
 const USAGE = [
   '**judge**: calibrated decisions on the model VS Code is serving:',
-  '- `/judge <statement>`: yes/no opinion with p_yes and a verdict band',
+  '- `/judge <context> | <statement>`: yes/no verdict on <statement> weighed against <context>',
   '- `/classify <text> | <option> | <option> | …`: pick exactly one option',
   '- `/rate <text> | 1-5` or `/rate <text> | low,medium,high`: rating on a scale',
   '- `/gate <action>`: advisory risk check (moves money / deletes data)',
@@ -59,7 +59,19 @@ async function runJudge(
   ctx: ChatContext,
 ): Promise<string> {
   if (!prompt.trim()) return USAGE;
-  const r = await judgeTool(client, prompt);
+  const parts = prompt.split('|').map((s) => s.trim());
+  // No premise: the only pair left is instruction-vs-claim, which is not a
+  // well-formed entailment question — the model's number would be noise
+  // rendered as a verdict. The chat surface abstains instead of calling the
+  // model at all (the judge *tool* marks the same call uncalibrated).
+  if (parts.length < 2 || !parts[0] || !parts.slice(1).join('').trim()) {
+    return [
+      '**ABSTAIN** · calibrated judgement requires a premise',
+      '`/judge <context> | <statement>` — the context is the evidence the statement is weighed against',
+    ].join('\n');
+  }
+  const [context, ...rest] = parts;
+  const r = await judgeTool(client, rest.join(' | '), context);
   const lines = [
     `**${r.answer.toUpperCase()}** · ${r.verdict}`,
     `p_yes ${r.p_yes} · p_no ${r.p_no} · confidence ${r.confidence}` +

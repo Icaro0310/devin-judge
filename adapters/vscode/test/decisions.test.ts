@@ -14,7 +14,7 @@ import {
   distVerdict,
   DEFAULT_GATE_CHECKS,
   GATE_RISK_LEVELS,
-  JUDGE_PREMISE,
+  SELF_ASSESSMENT_HYPOTHESIS,
 } from '../src/decisions.ts';
 import { applyTemperature } from '../src/calibration.ts';
 import type { Pair } from '../src/scoring.ts';
@@ -34,9 +34,13 @@ function scripted(score: (pair: Pair) => number) {
 test('judgeTool: noul pair = (premise, statement), no template', async () => {
   const backend = scripted(() => 0.8);
   const client = new DecisionClient(backend);
-  const r = await judgeTool(client, 'the fix resolves the bug');
+  const r = await judgeTool(
+    client,
+    'the fix resolves the bug',
+    'the deploy log is clean',
+  );
   assert.deepEqual(backend.calls, [
-    [[JUDGE_PREMISE, 'the fix resolves the bug']],
+    [['the deploy log is clean', 'the fix resolves the bug']],
   ]);
   assert.equal(r.answer, 'yes');
   assert.equal(r.p_yes, 0.8);
@@ -45,6 +49,26 @@ test('judgeTool: noul pair = (premise, statement), no template', async () => {
   assert.equal(r.confidence_source, 'self_report');
   assert.equal(r.low_confidence, false);
   assert.equal(r.verdict, 'yes');
+  assert.equal(r.uncalibrated, false);
+  assert.equal(r.basis, 'premise');
+});
+
+test('judgeTool: no context asks self-assessment, flagged uncalibrated', async () => {
+  const backend = scripted(() => 0.8);
+  const client = new DecisionClient(backend);
+  const r = await judgeTool(client, 'the sky is blue');
+  // The pair is the statement's own self-assessment — the only well-formed
+  // entailment question without a premise — never (instruction, claim).
+  assert.deepEqual(backend.calls, [
+    [['the sky is blue', SELF_ASSESSMENT_HYPOTHESIS]],
+  ]);
+  assert.equal(r.uncalibrated, true);
+  assert.equal(r.basis, 'self-assessment only');
+  assert.equal(r.confidence_source, 'self_report');
+  // Whitespace-only context counts as no context.
+  const blank = scripted(() => 0.8);
+  await judgeTool(new DecisionClient(blank), 's', '   ');
+  assert.deepEqual(blank.calls, [[['s', SELF_ASSESSMENT_HYPOTHESIS]]]);
 });
 
 test('judgeTool: low probability flips answer and verdict', async () => {
