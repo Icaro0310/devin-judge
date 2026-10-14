@@ -49,6 +49,19 @@ test('chat /judge with `context | statement` runs the weighed verdict', async ()
   ]);
 });
 
+test('chat /judge: pipes inside evidence stay in the premise', async () => {
+  const backend = scripted(() => 0.9);
+  const client = new DecisionClient(backend);
+  // The evidence is paste-able text and may contain '|' itself — the
+  // judged statement is always the final segment.
+  const md = await handleChat(
+    'judge', 'log says a|b failed | the fix resolves the bug', client);
+  assert.match(md, /YES/);
+  assert.deepEqual(backend.calls, [
+    [['log says a|b failed', 'the fix resolves the bug']],
+  ]);
+});
+
 test('chat /judge rejects dangling separator', async () => {
   const backend = scripted(() => 0.9);
   const client = new DecisionClient(backend);

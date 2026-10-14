@@ -377,8 +377,12 @@ def build_server(calibrator_path: str | None = "calibration.json"):
         }
         if record:
             out.update(_usage_fields())
+            # Self-assessment answers use a different question shape — keep
+            # them out of the "judge" few-shot pool so a corrected one never
+            # becomes an example for premise-weighed judgments.
+            log_tool = "judge_self_assessment" if uncalibrated else "judge"
             out["decision_id"] = _log(
-                "judge", statement, out["answer"],
+                log_tool, statement, out["answer"],
                 out["confidence"], out["low_confidence"])
         return out
 

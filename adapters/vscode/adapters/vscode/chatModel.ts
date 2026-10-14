@@ -59,19 +59,22 @@ async function runJudge(
   ctx: ChatContext,
 ): Promise<string> {
   if (!prompt.trim()) return USAGE;
-  const parts = prompt.split('|').map((s) => s.trim());
   // No premise: the only pair left is instruction-vs-claim, which is not a
   // well-formed entailment question — the model's number would be noise
   // rendered as a verdict. The chat surface abstains instead of calling the
   // model at all (the judge *tool* marks the same call uncalibrated).
-  if (parts.length < 2 || !parts[0] || !parts.slice(1).join('').trim()) {
+  // Split on the LAST pipe: evidence may itself contain '|'; the statement
+  // being judged is always the final segment.
+  const sep = prompt.lastIndexOf('|');
+  const context = sep >= 0 ? prompt.slice(0, sep).trim() : '';
+  const statement = sep >= 0 ? prompt.slice(sep + 1).trim() : '';
+  if (!context || !statement) {
     return [
       '**ABSTAIN** · calibrated judgement requires a premise',
       '`/judge <context> | <statement>` — the context is the evidence the statement is weighed against',
     ].join('\n');
   }
-  const [context, ...rest] = parts;
-  const r = await judgeTool(client, rest.join(' | '), context);
+  const r = await judgeTool(client, statement, context);
   const lines = [
     `**${r.answer.toUpperCase()}** · ${r.verdict}`,
     `p_yes ${r.p_yes} · p_no ${r.p_no} · confidence ${r.confidence}` +

@@ -61,7 +61,7 @@
         "commands": [
           {
             "name": "judge",
-            "description": "Yes/no opinion on a statement: @judge /judge <statement>"
+            "description": "Yes/no verdict weighed against evidence: @judge /judge <context> | <statement>"
           },
           {
             "name": "classify",
