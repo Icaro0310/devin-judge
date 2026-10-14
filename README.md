@@ -152,16 +152,26 @@ Backend selection and tuning, all optional:
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `POORDJAEVIN_BACKEND` | `acp` | `acp` = Devin's model via ACP, `nli` = fully offline local model |
+| `POORDJAEVIN_BACKEND` | `acp` | `acp` = Devin's model via ACP, `vscode-lm` = VS Code's model via the LM API, `nli` = fully offline local model |
 | `POORDJAEVIN_ACP_MODEL` | auto | pin a specific Devin model instead of automatic rotation |
 | `POORDJAEVIN_ACP_TIMEOUT` | `120` | seconds per decision round trip |
 | `POORDJAEVIN_ACP_MAX_COST` | unset | fail closed when cumulative ACP cost exceeds this budget |
+| `POORDJAEVIN_VSCODE_LM_ENDPOINT` | auto | endpoint file path or direct `http(s)://` URL override |
+| `POORDJAEVIN_VSCODE_LM_TIMEOUT` | `120` | seconds per request to the extension endpoint |
+| `POORDJAEVIN_VSCODE_LM_FALLBACK` | unset | `nli` = fall back to the local model when the extension is unavailable |
 | `POORDJAEVIN_ABSTAIN` | `off` | `on` = abstain below the calibrated threshold instead of answering |
 
-Honesty note: with `acp` the confidence is `self_report` (the model's own
-stated probability, temperature-adjusted), not NLI logprobs. Every tool
-response carries a `confidence_source` field so callers never mistake one for
-the other, and `model`/`cost` are logged per call for quota monitoring.
+Honesty note: with `acp` and `vscode-lm` the confidence is `self_report` (the
+model's own stated probability, temperature-adjusted), not NLI logprobs. Every
+tool response carries a `confidence_source` field so callers never mistake one
+for the other, and `model`/`cost` are logged per call for quota monitoring.
+
+The `vscode-lm` backend scores through whichever chat model VS Code is
+serving (Copilot, Codex, BYOK). `vscode.lm` only exists inside the extension
+host, so the `icaro0310.judge` extension serves a small localhost
+endpoint and advertises it via `vscode-lm-endpoint.json` in the platform data
+dir (next to `djaevin_log.db`). If the extension is not running the backend
+fails closed, or falls back to `nli` when `POORDJAEVIN_VSCODE_LM_FALLBACK=nli`.
 
 No Devin on the machine? Use the offline path:
 
@@ -192,8 +202,12 @@ The agent then has these local tools:
 | `rate(text, levels)` | an ordinal score (low / medium / high) |
 | `decide(text, questions)` | several typed questions at once, one pass |
 
-Why this beats asking an LLM to judge: it is local (private), free (no tokens),
-fast, and the confidence is calibrated instead of made up.
+Why this beats asking an LLM to judge: on the default NLI backend it is local
+(private), free (no tokens), fast, and the confidence is calibrated instead of
+made up. On `acp` or `vscode-lm` your scoring text goes to whichever model
+provider you picked; the confidence stays honestly labeled via
+`confidence_source`, calibrated when a matching calibrator is loaded and raw
+otherwise.
 
 ### Gate your commits (pre-commit hook)
 
@@ -229,7 +243,7 @@ default, or `POORDJAEVIN_BACKEND=nli` with the `local` extra installed.
 
 Most production AI work is not chat. It is fast structured decisions: **route** a ticket, **classify** an intent, **score** a sentiment, **extract** a field, **gate** a tool call. TypeSafe's **Jev** named this category ("System One" models) and nailed the thesis — and, per the independent [cross-system benchmark](crossbench/) below, it currently backs its calibration claims up: it's the strongest model measured here. It's also closed, hosted, and behind a waitlist.
 
-poordjaevin exists for the deployments where "call a hosted API" isn't the answer: private data, offline environments, zero marginal cost, no waitlist. It reproduces Jev's typed-decision interface on a small local model and proves its **own** calibration honestly (5-fold cross-validated, never graded on what it was fit on). Against the other open local alternatives it leads on the mixed decision-primitive benchmark below, but not on the high-cardinality one — see the real breakdown. It does not beat Jev. That's the honest trade for fully local and free.
+poordjaevin exists for the deployments where "call a hosted API" isn't the answer: private data, offline environments, zero marginal cost, no waitlist. It reproduces Jev's typed-decision interface on a small local model and proves its **own** calibration honestly (5-fold cross-validated, never graded on what it was fit on). Against the other open local alternatives it leads on the mixed decision-primitive benchmark below, but not on the high-cardinality one, see the real breakdown. It does not beat Jev. That's the honest trade for fully local and free on the NLI backend.
 
 ## poordjaevin vs the field
 
@@ -308,6 +322,7 @@ state + typed questions
 
 - **Local NLI backend (fully offline):** one small natural-language-inference model scores every option as an entailment hypothesis, in a single batched forward pass. Fully offline after a one-time ~400MB download. No key, no vendor, your text never leaves your machine. This is the backend used by `poordjaevin eval` / `calibrate` and by `Client()` in Python; select it for `serve` with `POORDJAEVIN_BACKEND=nli`.
 - **Devin ACP backend (default for `poordjaevin serve`):** routes scoring through `devin acp`, so decisions use the model your Devin plan already provides, with automatic rotation and per-call cost reporting. No extra model, no extra key.
+- **VS Code LM backend:** routes scoring through `vscode.lm` inside the `icaro0310.judge` extension, so decisions use whichever chat model VS Code is already serving (Copilot, Codex, BYOK), with no extra key. Select it with `POORDJAEVIN_BACKEND=vscode-lm`.
 - **Calibration (the moat):** temperature scaling fits one scalar so predicted confidence matches real accuracy; conformal thresholding turns a target risk budget into an "I don't know, escalate" signal. Calibration is backend-specific: a calibrator fitted on the NLI backend is not applied to ACP scores (the server warns and falls back to raw confidence on a mismatch).
 
 ## Benchmarks

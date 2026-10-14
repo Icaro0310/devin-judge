@@ -1,0 +1,134 @@
+{
+  "name": "judge",
+  "displayName": "Judge",
+  "publisher": "icaro0310",
+  "version": "0.1.2",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Icaro0310/devin-judge",
+    "directory": "adapters/vscode"
+  },
+  "description": "Calibrated decisions (judge/classify/rate/gate/decide) on the chat model VS Code is already serving, plus a localhost scoring endpoint for poordjaevin.",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true,
+      "description": "Judge sends text to the VS Code language model and serves a localhost endpoint; it does not execute or modify workspace code."
+    }
+  },
+  "main": "./out/adapters/vscode/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "judge.judge",
+        "title": "Judge: Judge"
+      },
+      {
+        "command": "judge.classify",
+        "title": "Judge: Classify"
+      },
+      {
+        "command": "judge.rate",
+        "title": "Judge: Rate"
+      },
+      {
+        "command": "judge.gate",
+        "title": "Judge: Gate"
+      },
+      {
+        "command": "judge.decide",
+        "title": "Judge: Decide"
+      }
+    ],
+    "chatParticipants": [
+      {
+        "id": "judge.judge",
+        "fullName": "Judge",
+        "name": "judge",
+        "description": "Calibrated decisions (judge/classify/rate/gate/decide) on the model VS Code is serving",
+        "isSticky": false,
+        "commands": [
+          {
+            "name": "judge",
+            "description": "Yes/no opinion on a statement: @judge /judge <statement>"
+          },
+          {
+            "name": "classify",
+            "description": "Pick one option: @judge /classify <text> | <option> | <option> | ..."
+          },
+          {
+            "name": "rate",
+            "description": "Rate on a scale: @judge /rate <text> | 1-5 or <level1,level2,...>"
+          },
+          {
+            "name": "gate",
+            "description": "Advisory risk gate on an action: @judge /gate <action>"
+          },
+          {
+            "name": "decide",
+            "description": "Batch typed questions: @judge /decide {\"state\": \"...\", \"questions\": {...}}"
+          }
+        ]
+      }
+    ],
+    "configuration": {
+      "title": "Judge",
+      "properties": {
+        "judge.calibratorPath": {
+          "type": "string",
+          "default": "calibration.json",
+          "description": "Path to a poordjaevin calibration file ({temperature, abstain_threshold, backend}); relative paths resolve against the first workspace folder.",
+          "scope": "window"
+        },
+        "judge.model.vendor": {
+          "type": "string",
+          "default": "",
+          "description": "Optional chat-model vendor filter for vscode.lm.selectChatModels (e.g. \"copilot\"). Empty = any.",
+          "scope": "window"
+        },
+        "judge.model.family": {
+          "type": "string",
+          "default": "",
+          "description": "Optional chat-model family filter for vscode.lm.selectChatModels (e.g. \"gpt-4o\"). Empty = any.",
+          "scope": "window"
+        },
+        "judge.model.id": {
+          "type": "string",
+          "default": "",
+          "description": "Optional chat-model id filter for vscode.lm.selectChatModels. Empty = any.",
+          "scope": "window"
+        },
+        "judge.endpoint.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Serve the localhost scoring endpoint (127.0.0.1, bearer token) that poordjaevin's vscode-lm backend POSTs to.",
+          "scope": "window"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "test": "node --test test/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json",
+    "smoke": "node --import ./test/vscode-loader-import.mjs test/smoke-activate.mjs",
+    "vscode:package": "vsce package --no-dependencies -o judge.vsix"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/vscode": "^1.100.0",
+    "@vscode/vsce": "^3.9.2",
+    "typescript": "^5.6.0"
+  }
+}

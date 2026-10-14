@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "out",
+    "rootDir": ".",
+    "sourceMap": false,
+    "declaration": false,
+    "rewriteRelativeImportExtensions": true
+  },
+  "include": ["src/**/*.ts", "adapters/**/*.ts"],
+  "exclude": ["test", "node_modules", "out"]
+}
