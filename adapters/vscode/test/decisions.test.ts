@@ -42,6 +42,7 @@ test('judgeTool: noul pair = (premise, statement), no template', async () => {
   assert.deepEqual(backend.calls, [
     [['the deploy log is clean', 'the fix resolves the bug']],
   ]);
+  if (r.uncalibrated) assert.fail('premise supplied — expected calibrated');
   assert.equal(r.answer, 'yes');
   assert.equal(r.p_yes, 0.8);
   assert.equal(r.p_no, 0.2);
@@ -49,8 +50,9 @@ test('judgeTool: noul pair = (premise, statement), no template', async () => {
   assert.equal(r.confidence_source, 'self_report');
   assert.equal(r.low_confidence, false);
   assert.equal(r.verdict, 'yes');
-  assert.equal(r.uncalibrated, false);
   assert.equal(r.basis, 'premise');
+  // The calibrated shape carries no self-assessment score.
+  assert.equal('uncalibrated_score' in r, false);
 });
 
 test('judgeTool: no context asks self-assessment, flagged uncalibrated', async () => {
@@ -62,9 +64,23 @@ test('judgeTool: no context asks self-assessment, flagged uncalibrated', async (
   assert.deepEqual(backend.calls, [
     [['the sky is blue', SELF_ASSESSMENT_HYPOTHESIS]],
   ]);
-  assert.equal(r.uncalibrated, true);
+  if (!r.uncalibrated) assert.fail('no premise — expected uncalibrated');
+  // A score, not a verdict: no yes/no answer, no p_yes/p_no, no verdict
+  // band — the number cannot be read as a measurement of the claim.
+  assert.equal(r.answer, null);
+  assert.equal(typeof r.uncalibrated_score, 'number');
+  assert.equal(r.uncalibrated_score, 0.8);
   assert.equal(r.basis, 'self-assessment only');
   assert.equal(r.confidence_source, 'self_report');
+  assert.equal(r.confidence, 0.8);
+  assert.equal(r.low_confidence, false);
+  assert.equal('verdict' in r, false);
+  assert.equal('p_yes' in r, false);
+  assert.equal('p_no' in r, false);
+  // low_confidence survives the uncalibrated shape.
+  const weak = await judgeTool(new DecisionClient(scripted(() => 0.5)), 's');
+  if (!weak.uncalibrated) assert.fail('expected uncalibrated');
+  assert.equal(weak.low_confidence, true);
   // Whitespace-only context counts as no context.
   const blank = scripted(() => 0.8);
   await judgeTool(new DecisionClient(blank), 's', '   ');
@@ -73,7 +89,8 @@ test('judgeTool: no context asks self-assessment, flagged uncalibrated', async (
 
 test('judgeTool: low probability flips answer and verdict', async () => {
   const client = new DecisionClient(scripted(() => 0.1));
-  const r = await judgeTool(client, 's');
+  const r = await judgeTool(client, 's', 'a premise');
+  if (r.uncalibrated) assert.fail('expected calibrated');
   assert.equal(r.answer, 'no');
   assert.equal(r.confidence, 0.9); // confidence = 1 - p when value=false
   assert.equal(r.verdict, 'strong_no');
@@ -81,11 +98,13 @@ test('judgeTool: low probability flips answer and verdict', async () => {
 
 test('judgeTool: review band + low_confidence forces review', async () => {
   const client = new DecisionClient(scripted(() => 0.5));
-  const r = await judgeTool(client, 's');
+  const r = await judgeTool(client, 's', 'a premise');
+  if (r.uncalibrated) assert.fail('expected calibrated');
   assert.equal(r.verdict, 'review');
-  // confidence 0.5 < 0.6 -> low_confidence even outside the review band
+  // confidence 0.9 < 0.95 -> low_confidence even outside the review band
   const edge = new DecisionClient(scripted(() => 0.9));
-  const r2 = await judgeTool(edge, 's', '', 0.95);
+  const r2 = await judgeTool(edge, 's', 'a premise', 0.95);
+  if (r2.uncalibrated) assert.fail('expected calibrated');
   assert.equal(r2.low_confidence, true);
   assert.equal(r2.verdict, 'review');
 });
@@ -172,7 +191,8 @@ test('doDecide: mixed primitive specs batch into ONE backend call', async () => 
 
 test('temperature rescales confidences, never the winner (noul)', async () => {
   const client = new DecisionClient(scripted(() => 0.9), { temperature: 2 });
-  const r = await judgeTool(client, 's');
+  const r = await judgeTool(client, 's', 'a premise');
+  if (r.uncalibrated) assert.fail('expected calibrated');
   // softmax(log p / 2) on [0.1, 0.9] is exactly [0.25, 0.75]
   assert.ok(Math.abs(r.p_yes - 0.75) < 1e-4, `p_yes=${r.p_yes}`);
   assert.equal(r.answer, 'yes');

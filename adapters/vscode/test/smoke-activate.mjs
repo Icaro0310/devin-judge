@@ -89,7 +89,7 @@ assert.deepEqual(out.json, { warmup: true, model: 'copilot/fake' }, 'warmup repo
 const chunks = [];
 const stream = { markdown(m) { chunks.push(String(m)); } };
 await r.participants[0].handler(
-  { prompt: 'the fix resolves the bug', command: 'judge' },
+  { prompt: 'the deploy log is clean | the fix resolves the bug', command: 'judge' },
   {},
   stream,
   {},
@@ -97,6 +97,16 @@ await r.participants[0].handler(
 // fake model scores the single noul pair 40 -> p_yes 0.4 -> NO
 assert.match(chunks.join(''), /\*\*NO\*\*/, 'judge renders a verdict');
 assert.match(chunks.join(''), /p_yes 0\.4/, 'judge renders p_yes');
+
+// no premise -> pre-parse abstain, the model is never asked
+chunks.length = 0;
+await r.participants[0].handler(
+  { prompt: 'the fix resolves the bug', command: 'judge' },
+  {},
+  stream,
+  {},
+);
+assert.match(chunks.join(''), /\*\*ABSTAIN\*\*/, 'no premise abstains, no verdict');
 
 // commands prefill the chat input (workbench.action.chat.open recorded)
 await r.commands.find((c) => c.id === 'judge.gate').fn();
