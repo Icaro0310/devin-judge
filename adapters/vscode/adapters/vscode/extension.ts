@@ -1,8 +1,8 @@
 /**
- * Extension entry — devin-judge (icaro0310.devin-judge).
+ * Extension entry — judge (icaro0310.judge).
  * Wiring only: starts the localhost scoring endpoint (the surface the
  * poordjaevin `vscode-lm` Python backend consumes), registers the
- * `@judge` chat participant and the devin-judge.* commands.
+ * `@judge` chat participant and the judge.* commands.
  *
  * Consent contract: `vscode.lm.selectChatModels` can show a model-access
  * consent dialog that requires a user gesture, so nothing here calls it
@@ -29,7 +29,7 @@ import type { ModelSelector } from './lmScorer.ts';
 import { startScoreServer } from './server.ts';
 import type { RunningEndpoint } from './server.ts';
 
-const EXTENSION_ID = 'icaro0310.devin-judge';
+const EXTENSION_ID = 'icaro0310.judge';
 const SLASH_COMMANDS = ['judge', 'classify', 'rate', 'gate', 'decide'] as const;
 
 // Held for deactivate(): the listening endpoint and its discovery file.
@@ -37,12 +37,12 @@ let running: RunningEndpoint | null = null;
 let advertisedFile: string | null = null;
 
 export function activate(context: vscode.ExtensionContext): Promise<void> {
-  const output = vscode.window.createOutputChannel('Devin Judge');
+  const output = vscode.window.createOutputChannel('Judge');
   context.subscriptions.push(output);
   const version = String(context.extension.packageJSON.version ?? '0.0.0');
 
   const getConfig = (): vscode.WorkspaceConfiguration =>
-    vscode.workspace.getConfiguration('devin-judge');
+    vscode.workspace.getConfiguration('judge');
 
   const modelSelector = (): ModelSelector => {
     const cfg = getConfig();
@@ -82,7 +82,7 @@ export function activate(context: vscode.ExtensionContext): Promise<void> {
   // the query without submitting keeps the human in the loop.
   for (const name of SLASH_COMMANDS) {
     context.subscriptions.push(
-      vscode.commands.registerCommand(`devin-judge.${name}`, async () => {
+      vscode.commands.registerCommand(`judge.${name}`, async () => {
         await vscode.commands.executeCommand('workbench.action.chat.open', {
           query: `@judge /${name} `,
           isPartialQuery: true,
@@ -96,7 +96,7 @@ export function activate(context: vscode.ExtensionContext): Promise<void> {
   const ready = (async () => {
     if (!getConfig().get<boolean>('endpoint.enabled', true)) {
       output.appendLine(
-        'endpoint disabled via devin-judge.endpoint.enabled=false',
+        'endpoint disabled via judge.endpoint.enabled=false',
       );
       return;
     }

@@ -1,6 +1,6 @@
 {
-  "name": "devin-judge",
-  "displayName": "Devin Judge",
+  "name": "judge",
+  "displayName": "Judge",
   "publisher": "icaro0310",
   "version": "0.1.2",
   "private": true,
@@ -24,37 +24,37 @@
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": true,
-      "description": "Devin Judge sends text to the VS Code language model and serves a localhost endpoint; it does not execute or modify workspace code."
+      "description": "Judge sends text to the VS Code language model and serves a localhost endpoint; it does not execute or modify workspace code."
     }
   },
   "main": "./out/adapters/vscode/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "devin-judge.judge",
-        "title": "Devin Judge: Judge"
+        "command": "judge.judge",
+        "title": "Judge: Judge"
       },
       {
-        "command": "devin-judge.classify",
-        "title": "Devin Judge: Classify"
+        "command": "judge.classify",
+        "title": "Judge: Classify"
       },
       {
-        "command": "devin-judge.rate",
-        "title": "Devin Judge: Rate"
+        "command": "judge.rate",
+        "title": "Judge: Rate"
       },
       {
-        "command": "devin-judge.gate",
-        "title": "Devin Judge: Gate"
+        "command": "judge.gate",
+        "title": "Judge: Gate"
       },
       {
-        "command": "devin-judge.decide",
-        "title": "Devin Judge: Decide"
+        "command": "judge.decide",
+        "title": "Judge: Decide"
       }
     ],
     "chatParticipants": [
       {
-        "id": "devin-judge.judge",
-        "fullName": "Devin Judge",
+        "id": "judge.judge",
+        "fullName": "Judge",
         "name": "judge",
         "description": "Calibrated decisions (judge/classify/rate/gate/decide) on the model VS Code is serving",
         "isSticky": false,
@@ -83,33 +83,33 @@
       }
     ],
     "configuration": {
-      "title": "Devin Judge",
+      "title": "Judge",
       "properties": {
-        "devin-judge.calibratorPath": {
+        "judge.calibratorPath": {
           "type": "string",
           "default": "calibration.json",
           "description": "Path to a poordjaevin calibration file ({temperature, abstain_threshold, backend}); relative paths resolve against the first workspace folder.",
           "scope": "resource"
         },
-        "devin-judge.model.vendor": {
+        "judge.model.vendor": {
           "type": "string",
           "default": "",
           "description": "Optional chat-model vendor filter for vscode.lm.selectChatModels (e.g. \"copilot\"). Empty = any.",
           "scope": "resource"
         },
-        "devin-judge.model.family": {
+        "judge.model.family": {
           "type": "string",
           "default": "",
           "description": "Optional chat-model family filter for vscode.lm.selectChatModels (e.g. \"gpt-4o\"). Empty = any.",
           "scope": "resource"
         },
-        "devin-judge.model.id": {
+        "judge.model.id": {
           "type": "string",
           "default": "",
           "description": "Optional chat-model id filter for vscode.lm.selectChatModels. Empty = any.",
           "scope": "resource"
         },
-        "devin-judge.endpoint.enabled": {
+        "judge.endpoint.enabled": {
           "type": "boolean",
           "default": true,
           "description": "Serve the localhost scoring endpoint (127.0.0.1, bearer token) that poordjaevin's vscode-lm backend POSTs to.",
@@ -123,7 +123,7 @@
     "typecheck": "tsc --noEmit",
     "build": "tsc -p tsconfig.build.json",
     "smoke": "node --import ./test/vscode-loader-import.mjs test/smoke-activate.mjs",
-    "vscode:package": "vsce package --no-dependencies -o devin-judge.vsix"
+    "vscode:package": "vsce package --no-dependencies -o judge.vsix"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

@@ -9,7 +9,7 @@ import path from 'node:path';
 
 // Redirect the endpoint discovery file into a scratch data dir BEFORE
 // activate() runs (endpointFilePath reads XDG_DATA_HOME at request time).
-const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'devin-judge-smoke-'));
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'judge-smoke-'));
 process.env.XDG_DATA_HOME = tmp;
 
 const vscode = await import('vscode');
@@ -24,16 +24,16 @@ const r = vscode.registered;
 
 assert.deepEqual(
   r.participants.map((p) => p.id),
-  ['devin-judge.judge'],
+  ['judge.judge'],
   'participant id matches manifest',
 );
 for (const c of ['judge', 'classify', 'rate', 'gate', 'decide']) {
   assert.ok(
-    r.commands.some((x) => x.id === `devin-judge.${c}`),
-    `command devin-judge.${c} registered`,
+    r.commands.some((x) => x.id === `judge.${c}`),
+    `command judge.${c} registered`,
   );
 }
-assert.ok(r.outputs.some((o) => o.name === 'Devin Judge'), 'output channel created');
+assert.ok(r.outputs.some((o) => o.name === 'Judge'), 'output channel created');
 assert.equal(r.selectCalls.length, 0, 'no selectChatModels at activate (consent needs a gesture)');
 
 // --- the real endpoint: discovery file -> auth -> warmup -> 503 -> score ---
@@ -43,7 +43,7 @@ const spec = JSON.parse(fs.readFileSync(file, 'utf8'));
 assert.match(spec.url, /^http:\/\/127\.0\.0\.1:\d+\/score$/);
 assert.equal(spec.token.length, 48);
 assert.equal(spec.pid, process.pid);
-assert.equal(spec.extension, 'icaro0310.devin-judge');
+assert.equal(spec.extension, 'icaro0310.judge');
 if (process.platform !== 'win32') {
   assert.equal(fs.statSync(file).mode & 0o777, 0o600, 'endpoint file is 0600');
 }
@@ -99,7 +99,7 @@ assert.match(chunks.join(''), /\*\*NO\*\*/, 'judge renders a verdict');
 assert.match(chunks.join(''), /p_yes 0\.4/, 'judge renders p_yes');
 
 // commands prefill the chat input (workbench.action.chat.open recorded)
-await r.commands.find((c) => c.id === 'devin-judge.gate').fn();
+await r.commands.find((c) => c.id === 'judge.gate').fn();
 const opened = r.executedCommands.find((c) => c.id === 'workbench.action.chat.open');
 assert.equal(opened.args[0].query, '@judge /gate ');
 assert.equal(opened.args[0].isPartialQuery, true);

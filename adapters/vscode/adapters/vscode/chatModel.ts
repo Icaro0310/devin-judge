@@ -20,7 +20,7 @@ import type {
 } from '../../src/decisions.ts';
 
 const USAGE = [
-  '**devin-judge**: calibrated decisions on the model VS Code is serving:',
+  '**judge**: calibrated decisions on the model VS Code is serving:',
   '- `/judge <statement>`: yes/no opinion with p_yes and a verdict band',
   '- `/classify <text> | <option> | <option> | …`: pick exactly one option',
   '- `/rate <text> | 1-5` or `/rate <text> | low,medium,high`: rating on a scale',
@@ -50,7 +50,7 @@ function fmtFooter(temperature: number | undefined, extra?: string): string {
 }
 
 function fail(message: string): string {
-  return `**devin-judge**: ${message}`;
+  return `**judge**: ${message}`;
 }
 
 async function runJudge(

@@ -13,9 +13,9 @@ import type { LmScorer } from './lmScorer.ts';
 import type { Pair } from '../../src/scoring.ts';
 
 /** Must match `contributes.chatParticipants[].id` in package.json. */
-const PARTICIPANT_ID = 'devin-judge.judge';
+const PARTICIPANT_ID = 'judge.judge';
 const FALLBACK =
-  'devin-judge could not produce a decision; see the Devin Judge output channel';
+  'judge could not produce a decision; see the Judge output channel';
 
 export interface JudgeEnv {
   scorer: LmScorer;
@@ -47,7 +47,7 @@ export function createJudgeParticipant(env: JudgeEnv): vscode.ChatParticipant {
     } catch (error) {
       try {
         stream.markdown(
-          `**devin-judge** could not answer: ${
+          `**judge** could not answer: ${
             error instanceof Error ? error.message : String(error)
           }`,
         );

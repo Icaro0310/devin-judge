@@ -55,13 +55,13 @@ test('endpointFilePath: win32 prefers LOCALAPPDATA, falls back APPDATA/home', ()
 });
 
 test('writeEndpointFile + removeEndpointFile roundtrip with mode 0o600', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'devin-judge-ep-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'judge-ep-'));
   const file = path.join(dir, 'nested', 'vscode-lm-endpoint.json');
   const spec = {
     url: 'http://127.0.0.1:1234/score',
     token: 't'.repeat(48),
     pid: process.pid,
-    extension: 'icaro0310.devin-judge',
+    extension: 'icaro0310.judge',
     version: '0.1.0',
   };
   writeEndpointFile(file, spec);

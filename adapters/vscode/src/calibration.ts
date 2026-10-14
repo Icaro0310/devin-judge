@@ -101,7 +101,7 @@ export function resolveForBackend(
   };
 }
 
-/** Resolve `devin-judge.calibratorPath`: absolute stays absolute, a
+/** Resolve `judge.calibratorPath`: absolute stays absolute, a
  *  relative path resolves against the workspace folder (extension-host
  *  cwd when there is none — same semantics as the Python default). */
 export function resolveCalibratorPath(

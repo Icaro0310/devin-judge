@@ -1,4 +1,4 @@
-# Devin Judge
+# Judge
 
 Calibrated, advisory decisions on the chat model VS Code is already
 serving: Copilot, Codex or BYOK, whichever `vscode.lm` can reach. Two
@@ -32,7 +32,7 @@ carries `confidence`, `confidence_source: self_report`, a
 (`strong_no/no/review/yes/strong_yes`, or `confident/review`).
 **Advisory only**: a verdict to weigh, never a command.
 
-The `Devin Judge: Judge/Classify/Rate/Gate/Decide` commands prefill
+The `Judge: Judge/Classify/Rate/Gate/Decide` commands prefill
 `@judge /<cmd> ` in the chat input; the participant does the rest.
 
 ## The localhost endpoint
@@ -62,7 +62,7 @@ user gesture, so **nothing touches `vscode.lm` at activation**. The
 endpoint listens without a model; the first request that needs one
 selects lazily. If a `503` surprises you: **run `@judge` once in chat to
 grant model access**, then the endpoint becomes usable. Restrict which
-model answers via `devin-judge.model.vendor` / `.family` / `.id`
+model answers via `judge.model.vendor` / `.family` / `.id`
 (passed to `selectChatModels`; empty = whatever VS Code serves).
 
 ## Privacy
@@ -78,9 +78,9 @@ on `127.0.0.1` and requires the bearer token stored in the
 
 | Setting | Default | Effect |
 |---|---|---|
-| `devin-judge.calibratorPath` | `calibration.json` | poordjaevin calibrator (`{temperature, abstain_threshold, backend}`), resolved against the first workspace folder. Re-read per request. A calibrator fitted for another backend is ignored (raw confidence + a warning in the output channel). Abstention needs `POORDJAEVIN_ABSTAIN=on`, same as upstream. |
-| `devin-judge.model.vendor` / `.family` / `.id` | `""` | Optional `selectChatModels` filters. |
-| `devin-judge.endpoint.enabled` | `true` | Set `false` to run only the `@judge` participant. |
+| `judge.calibratorPath` | `calibration.json` | poordjaevin calibrator (`{temperature, abstain_threshold, backend}`), resolved against the first workspace folder. Re-read per request. A calibrator fitted for another backend is ignored (raw confidence + a warning in the output channel). Abstention needs `POORDJAEVIN_ABSTAIN=on`, same as upstream. |
+| `judge.model.vendor` / `.family` / `.id` | `""` | Optional `selectChatModels` filters. |
+| `judge.endpoint.enabled` | `true` | Set `false` to run only the `@judge` participant. |
 
 Requires VS Code 1.100+. MIT.
 
@@ -90,7 +90,7 @@ Requires VS Code 1.100+. MIT.
 `npm test` runs the pure suites (`node --test`, Node ≥ 22.18 strips the
 `.ts` natively). `npm run smoke` activates the compiled extension against
 `test/stubs/vscode.mjs` and exercises the real loopback HTTP endpoint.
-`npm run vscode:package` produces `devin-judge.vsix` (`npx @vscode/vsce`
+`npm run vscode:package` produces `judge.vsix` (`npx @vscode/vsce`
 if `vsce` is not on PATH).
 **`engines.vscode` and `@types/vscode` move together**: `vsce` rejects
 a types version newer than `engines`; bump both in the same commit.

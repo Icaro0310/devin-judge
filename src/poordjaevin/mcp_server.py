@@ -268,7 +268,7 @@ def _select_backend():
     "acp" (default) scores through Devin's own ACP session — the model already
     available to the Devin CLI, with automatic rotation, no extra install and
     no API key beyond the Devin credentials. "vscode-lm" scores through the
-    VS Code Language Model API via the icaro0310.devin-judge extension's
+    VS Code Language Model API via the icaro0310.judge extension's
     localhost endpoint (Copilot, Codex or BYOK, whichever VS Code is serving).
     "nli" uses the fully offline local NLI backend, which lazily needs the
     'local' extra (torch + transformers, ~400MB model download on first run).

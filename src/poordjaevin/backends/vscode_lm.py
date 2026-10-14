@@ -3,7 +3,7 @@
 Symmetric to acp_devin.py — same one-call-per-batch, same self-reported
 0-100 contract — but the bridge lives inside the VS Code extension host:
 ``vscode.lm`` does not exist outside it, so no child process can reach it.
-The devin-judge VS Code extension (publisher ``icaro0310``) serves a small
+The judge VS Code extension (publisher ``icaro0310``) serves a small
 localhost endpoint and this backend POSTs scoring batches to it. Whatever
 model the user picked in VS Code — Copilot, Codex or BYOK — answers; the
 calibration layer on top does not change.
@@ -75,7 +75,7 @@ def _default_endpoint_file(platform: str | None = None, env=None, home=None) -> 
 
 
 class VscodeLmBackend:
-    """entail_probs via the devin-judge VS Code extension's localhost endpoint."""
+    """entail_probs via the judge VS Code extension's localhost endpoint."""
 
     confidence_source = "self_report"
 
@@ -106,7 +106,7 @@ class VscodeLmBackend:
         except FileNotFoundError as error:
             raise VscodeLmUnavailable(
                 f"no VS Code LM endpoint (looked for {source}); is the "
-                "icaro0310.devin-judge extension running?") from error
+                "icaro0310.judge extension running?") from error
         except (OSError, ValueError) as error:
             raise VscodeLmUnavailable(
                 f"cannot read VS Code LM endpoint file {source}: {error}") from error
