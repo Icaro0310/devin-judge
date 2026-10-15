@@ -106,6 +106,7 @@ jobs:
     secrets:
       OVSX_PAT: ${{ secrets.OVSX_PAT }}
     with:
+      azure-marketplace-required: true
       package-dir: .
       pypi-environment: pypi
       vscode-ext-dir: adapters/vscode
