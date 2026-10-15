@@ -113,6 +113,10 @@ await r.commands.find((c) => c.id === 'judge.gate').fn();
 const opened = r.executedCommands.find((c) => c.id === 'workbench.action.chat.open');
 assert.equal(opened.args[0].query, '@judge /gate ');
 assert.equal(opened.args[0].isPartialQuery, true);
+assert.ok(
+  r.executedCommands.some((c) => c.id === 'workbench.action.chat.focus'),
+  'chat view is focused after opening',
+);
 
 // --- deactivate removes the discovery file and stops listening ---
 await ext.deactivate();

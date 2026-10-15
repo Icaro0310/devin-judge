@@ -81,13 +81,27 @@ export function activate(context: vscode.ExtensionContext): Promise<void> {
   // Minimal wrappers: prefill `@judge /<cmd>` in the chat input so the
   // participant (and its model consent flow) does the real work. Typing
   // the query without submitting keeps the human in the loop.
+  const openJudgeChat = async (query: string): Promise<void> => {
+    await vscode.commands.executeCommand('workbench.action.chat.open', {
+      query,
+      isPartialQuery: true,
+    });
+    for (const command of ['workbench.action.chat.focus']) {
+      try {
+        await vscode.commands.executeCommand(command);
+        break;
+      } catch {
+        // Some VS Code builds expose the chat open command without a
+        // dedicated focus command; the open command itself already brings
+        // the chat view into view. Fall through without aborting.
+      }
+    }
+  };
+
   for (const name of SLASH_COMMANDS) {
     context.subscriptions.push(
       vscode.commands.registerCommand(`judge.${name}`, async () => {
-        await vscode.commands.executeCommand('workbench.action.chat.open', {
-          query: `@judge /${name} `,
-          isPartialQuery: true,
-        });
+        await openJudgeChat(`@judge /${name} `);
       }),
     );
   }
