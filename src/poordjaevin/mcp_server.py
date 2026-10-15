@@ -608,7 +608,13 @@ def main(calibrator_path: str | None = "calibration.json") -> None:
     # POORDJAEVIN_CALIBRATOR (env) wins over the default relative path, so the MCP
     # config can point at an absolute calibrator regardless of the server's cwd.
     calibrator_path = os.environ.get("POORDJAEVIN_CALIBRATOR", calibrator_path)
-    build_server(calibrator_path).run()  # stdio transport
+    try:
+        build_server(calibrator_path).run()  # stdio transport
+    except ImportError as exc:
+        # Missing the 'mcp' extra — MCP hosts surface the raw server log,
+        # so this must be one stderr line naming the extra, not a traceback.
+        print(f"error: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
 
 
 if __name__ == "__main__":
