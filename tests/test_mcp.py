@@ -248,3 +248,23 @@ def test_mcp_tool_surface_is_pinned():
     after a deliberate edit here — check it stays read-only before
     widening."""
     assert _registered_tool_names() == {"classify","decide","djaevin_calibrate","djaevin_usage","gate","judge","keepalive","mark_disagreement","rate","usage"}
+
+
+def test_main_missing_mcp_extra_exits_with_hint(tmp_path, monkeypatch, capsys):
+    """`poordjaevin serve` without the [mcp] extra must fail with the
+    install hint on stderr and exit 1 — MCP hosts surface the raw log,
+    so a traceback is noise, not signal."""
+    from poordjaevin import mcp_server
+
+    def _boom(*_a, **_k):
+        raise ImportError(
+            "The MCP server needs the 'mcp' extra: "
+            "pip install 'poordjaevin[local,mcp]'")
+
+    monkeypatch.setattr(mcp_server, "build_server", _boom)
+    with pytest.raises(SystemExit) as exc:
+        mcp_server.main(calibrator_path=str(tmp_path / "none.json"))
+    assert exc.value.code == 1
+    err = capsys.readouterr().err
+    assert "poordjaevin[local,mcp]" in err
+    assert "Traceback" not in err
