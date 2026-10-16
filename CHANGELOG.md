@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `poordjaevin ask` on a backend failure (e.g. offline with no model
+  cache) leaked a raw traceback; it now prints the same structured
+  `{"error": "backend", ...}` JSON and exits 1, matching the `gate`
+  fail-closed contract. Covers both the lazy local default and the
+  `POORDJAEVIN_BACKEND`-selected client.
+
 ### Changed
 
 - README gains the generated `Part of the DEVIN ecosystem` block
