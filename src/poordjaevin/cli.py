@@ -120,7 +120,11 @@ def cmd_ask(args) -> int:
 
     from .evaluate import _build_primitive
     questions = {name: _build_primitive(spec) for name, spec in specs.items()}
-    res = Client(temperature=temperature).ask(state, questions)
+    try:
+        res = Client(temperature=temperature).ask(state, questions)
+    except Exception as exc:  # noqa: BLE001 — same fail-closed contract as `gate`
+        print(json.dumps({"error": "backend", "detail": str(exc)}))
+        return 1
 
     print(json.dumps({
         name: {
