@@ -39,6 +39,22 @@ def test_gate_backend_error_fails_closed(monkeypatch, capsys):
     assert out["verdict"].startswith("block")
 
 
+def test_ask_backend_error_fails_closed(tmp_path, monkeypatch, capsys):
+    """ask must not leak a raw traceback when the backend is unavailable
+    (e.g. offline without a cached model) — same contract as `gate`."""
+    from poordjaevin.client import Client
+
+    def dead(self, state, questions):
+        raise OSError("couldn't connect to huggingface.co and no cached files")
+
+    qfile = tmp_path / "questions.json"
+    qfile.write_text(json.dumps({"ok": {"type": "choice", "options": ["yes", "no"]}}))
+    monkeypatch.setattr(Client, "ask", dead)
+    assert main(["ask", "--state", "anything", "--questions", str(qfile)]) == 1
+    out = json.loads(capsys.readouterr().out)
+    assert out["error"] == "backend"
+
+
 def test_gate_no_action_is_usage_error(capsys):
     assert main(["gate"]) == 2
 
