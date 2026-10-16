@@ -369,17 +369,32 @@ def build_server(calibrator_path: str | None = "calibration.json"):
         tool = "judge_self_assessment" if uncalibrated else "judge"
         p_yes = ans["prob_true"]
         low_conf = _low_conf(tool, ans["confidence"])
-        out = {
-            "answer": "yes" if ans["value"] is True else "no",
-            "p_yes": p_yes,
-            "p_no": round(1 - p_yes, 4),
-            "confidence": ans["confidence"],
-            "confidence_source": _confidence_source(),
-            "low_confidence": low_conf,
-            "verdict": noul_verdict(p_yes, low_conf),
-            "uncalibrated": uncalibrated,
-            "basis": "self-assessment only" if uncalibrated else "premise",
-        }
+        if uncalibrated:
+            # A self-assessment score is not a verdict: no yes/no answer,
+            # no p_yes/p_no pair, no verdict band. confidence_source is the
+            # literal "self_report" — the question shape is self-assessment
+            # by definition, whichever backend produced the number.
+            out = {
+                "answer": None,
+                "uncalibrated_score": p_yes,
+                "confidence": ans["confidence"],
+                "confidence_source": "self_report",
+                "low_confidence": low_conf,
+                "uncalibrated": True,
+                "basis": "self-assessment only",
+            }
+        else:
+            out = {
+                "answer": "yes" if ans["value"] is True else "no",
+                "p_yes": p_yes,
+                "p_no": round(1 - p_yes, 4),
+                "confidence": ans["confidence"],
+                "confidence_source": _confidence_source(),
+                "low_confidence": low_conf,
+                "verdict": noul_verdict(p_yes, low_conf),
+                "uncalibrated": False,
+                "basis": "premise",
+            }
         if record:
             out.update(_usage_fields())
             out["decision_id"] = _log(
@@ -443,8 +458,14 @@ def build_server(calibrator_path: str | None = "calibration.json"):
 
     @server.tool()
     def judge(statement: str, context: str = "") -> dict:
-        """Yes/no opinion on `statement` (optional `context`). Returns
-        {answer: "yes"|"no", p_yes, p_no, confidence, low_confidence}.
+        """Yes/no opinion on `statement` (optional `context`). With context,
+        the statement is weighed against it (calibrated): returns
+        {answer: "yes"|"no", p_yes, p_no, confidence, confidence_source,
+        low_confidence, verdict, uncalibrated: false, basis: "premise"}.
+        Without context only the statement's self-assessment is scored —
+        no verdict exists: returns {answer: null, uncalibrated_score,
+        confidence, confidence_source: "self_report", low_confidence,
+        uncalibrated: true, basis: "self-assessment only"}.
         Advisory: a second opinion to weigh, never a verdict."""
         return _judge(statement, context)
 
@@ -500,6 +521,9 @@ def build_server(calibrator_path: str | None = "calibration.json"):
         details = {}
         for name, stmt in DEFAULT_GATE_CHECKS.items():
             check = _judge(stmt, action, record=False)
+            # `action` is the premise; if it were empty the check runs
+            # uncalibrated and p_yes is absent — .get() yields null, never
+            # a fabricated number.
             details[name] = check.get("p_yes") if "error" not in check else check
         low_conf = _low_conf("gate", risk["confidence"])
         out = {
@@ -584,7 +608,13 @@ def main(calibrator_path: str | None = "calibration.json") -> None:
     # POORDJAEVIN_CALIBRATOR (env) wins over the default relative path, so the MCP
     # config can point at an absolute calibrator regardless of the server's cwd.
     calibrator_path = os.environ.get("POORDJAEVIN_CALIBRATOR", calibrator_path)
-    build_server(calibrator_path).run()  # stdio transport
+    try:
+        build_server(calibrator_path).run()  # stdio transport
+    except ImportError as exc:
+        # Missing the 'mcp' extra — MCP hosts surface the raw server log,
+        # so this must be one stderr line naming the extra, not a traceback.
+        print(f"error: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
 
 
 if __name__ == "__main__":

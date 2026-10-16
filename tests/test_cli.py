@@ -70,3 +70,36 @@ def test_gate_action_file(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(mcp_srv, "do_gate", fake)
     assert main(["gate", "--action-file", str(f)]) == 0
     assert seen["action"] == "drop the table"
+
+
+def test_env_or_local_client_honors_backend_env(monkeypatch):
+    """POORDJAEVIN_BACKEND set -> the selector path (build_client) is
+    consulted instead of a plain local Client."""
+    from poordjaevin import cli
+
+    monkeypatch.setenv("POORDJAEVIN_BACKEND", "vscode-lm")
+    sentinel = object()
+    calls = []
+    monkeypatch.setattr(
+        mcp_srv, "build_client",
+        lambda *a, **k: calls.append((a, k)) or sentinel)
+    assert cli._env_or_local_client() is sentinel
+    assert len(calls) == 1
+
+
+def test_env_or_local_client_defaults_to_plain_client(monkeypatch):
+    """No env -> plain Client() (lazy local NLI); _select_backend must
+    not run — the pre-selector behaviour is preserved."""
+    from poordjaevin import cli
+    from poordjaevin.client import Client
+
+    monkeypatch.delenv("POORDJAEVIN_BACKEND", raising=False)
+
+    def boom():
+        raise AssertionError("_select_backend must not be consulted")
+    monkeypatch.setattr(mcp_srv, "_select_backend", boom)
+
+    client = cli._env_or_local_client(temperature=1.5)
+    assert isinstance(client, Client)
+    assert client.temperature == 1.5
+    assert client._backend is None  # lazy: local NLI not built yet

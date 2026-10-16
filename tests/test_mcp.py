@@ -99,6 +99,59 @@ def test_uncalibrated_judge_logs_and_thresholds_as_self_assessment(
     assert [r[0] for r in rows] == ["judge_self_assessment"]
 
 
+def test_uncalibrated_judge_output_shape(tmp_path, monkeypatch):
+    """No-context judge returns a score, never a verdict: answer is null,
+    the raw score sits under uncalibrated_score, provenance is the
+    literal "self_report", and no verdict/p_yes/p_no keys exist."""
+    import asyncio
+    import json
+
+    from poordjaevin import mcp_server
+
+    monkeypatch.setenv("POORDJAEVIN_LOG_DB", str(tmp_path / "djaevin_log.db"))
+    monkeypatch.setattr(
+        mcp_server, "build_client",
+        lambda *a, **k: Client(backend=ScriptedBackend([0.42])))
+
+    server = mcp_server.build_server()
+    result = asyncio.run(server.call_tool(
+        "judge", {"statement": "the sky is blue"}))
+    out = json.loads(result.content[0].text)
+    assert out["answer"] is None
+    assert out["uncalibrated_score"] == 0.42
+    assert out["confidence_source"] == "self_report"
+    assert out["uncalibrated"] is True
+    assert out["basis"] == "self-assessment only"
+    for absent in ("verdict", "p_yes", "p_no"):
+        assert absent not in out
+
+
+def test_calibrated_judge_output_shape_unchanged(tmp_path, monkeypatch):
+    """With context the judge contract is untouched: a real yes/no
+    answer, the p_yes/p_no pair, a verdict band and basis "premise"."""
+    import asyncio
+    import json
+
+    from poordjaevin import mcp_server
+
+    monkeypatch.setenv("POORDJAEVIN_LOG_DB", str(tmp_path / "djaevin_log.db"))
+    monkeypatch.setattr(
+        mcp_server, "build_client",
+        lambda *a, **k: Client(backend=ScriptedBackend([0.9])))
+
+    server = mcp_server.build_server()
+    result = asyncio.run(server.call_tool(
+        "judge", {"statement": "the deploy is safe",
+                  "context": "the rollout log is clean"}))
+    out = json.loads(result.content[0].text)
+    assert out["answer"] == "yes"
+    assert out["p_yes"] == 0.9
+    assert out["p_no"] == 0.1
+    assert out["verdict"] == "strong_yes"
+    assert out["uncalibrated"] is False
+    assert out["basis"] == "premise"
+
+
 def test_rate_returns_level_and_score():
     client = Client(backend=ScriptedBackend([0.1, 0.2, 0.9]))
     out = do_rate(client, "this is infuriating", ["low", "medium", "high"])
@@ -195,3 +248,23 @@ def test_mcp_tool_surface_is_pinned():
     after a deliberate edit here — check it stays read-only before
     widening."""
     assert _registered_tool_names() == {"classify","decide","djaevin_calibrate","djaevin_usage","gate","judge","keepalive","mark_disagreement","rate","usage"}
+
+
+def test_main_missing_mcp_extra_exits_with_hint(tmp_path, monkeypatch, capsys):
+    """`poordjaevin serve` without the [mcp] extra must fail with the
+    install hint on stderr and exit 1 — MCP hosts surface the raw log,
+    so a traceback is noise, not signal."""
+    from poordjaevin import mcp_server
+
+    def _boom(*_a, **_k):
+        raise ImportError(
+            "The MCP server needs the 'mcp' extra: "
+            "pip install 'poordjaevin[local,mcp]'")
+
+    monkeypatch.setattr(mcp_server, "build_server", _boom)
+    with pytest.raises(SystemExit) as exc:
+        mcp_server.main(calibrator_path=str(tmp_path / "none.json"))
+    assert exc.value.code == 1
+    err = capsys.readouterr().err
+    assert "poordjaevin[local,mcp]" in err
+    assert "Traceback" not in err
