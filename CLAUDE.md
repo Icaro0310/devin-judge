@@ -32,6 +32,7 @@ measured calibration. See `PRD.md` for the full spec and `README.md` for the pit
 ## Commands
 
 ```bash
+pip install -e ".[test]"                     # minimal test-only install (pytest + mcp)
 pip install -e ".[local,plots,mcp,dev]"   # full dev install
 pytest -q                                  # fast suite, no model, no key
 poordjaevin eval --set evalset/tasks.jsonl     # accuracy + ECE (downloads model)
