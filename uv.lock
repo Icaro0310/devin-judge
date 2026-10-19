@@ -2322,23 +2322,29 @@ plots = [
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
     { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
 ]
+test = [
+    { name = "mcp" },
+    { name = "pytest" },
+]
 
 [package.metadata]
 requires-dist = [
     { name = "anthropic", marker = "extra == 'llm'", specifier = ">=0.40" },
     { name = "matplotlib", marker = "extra == 'plots'", specifier = ">=3.8" },
     { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.2" },
+    { name = "mcp", marker = "extra == 'test'", specifier = ">=1.2" },
     { name = "numpy", marker = "extra == 'plots'", specifier = ">=1.26" },
     { name = "openai", marker = "extra == 'llm'", specifier = ">=1.40" },
     { name = "protobuf", marker = "extra == 'local'", specifier = ">=4.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
+    { name = "pytest", marker = "extra == 'test'", specifier = ">=8.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.9" },
     { name = "sentencepiece", marker = "extra == 'local'", specifier = ">=0.2" },
     { name = "torch", marker = "extra == 'local'", specifier = ">=2.2" },
     { name = "transformers", marker = "extra == 'local'", specifier = ">=4.40" },
 ]
-provides-extras = ["local", "llm", "plots", "mcp", "dev"]
+provides-extras = ["local", "llm", "plots", "mcp", "dev", "test"]
 
 [[package]]
 name = "protobuf"
