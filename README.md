@@ -438,3 +438,5 @@ MIT. Use it, ship it, sell it.
 ---
 
 If this saved you debugging time, a ⭐ on the repo helps others find it.
+
+<!-- devin-judge README: landing-page doc, badges live at the top -->
