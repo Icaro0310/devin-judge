@@ -1,7 +1,7 @@
 # Results
 
 Every number here is produced by `poorjev eval` on the shipped eval set
-(`evalset/tasks.jsonl`, 55 items / 160 labelled decisions). Reproduce with:
+(`evalset/tasks.jsonl`, 70 items / 203 labelled decisions). Reproduce with:
 
 ```bash
 pip install -e ".[local]"
@@ -18,13 +18,13 @@ Backend: `MoritzLaurer/deberta-v3-base-zeroshot-v2.0`, keyless, offline.
 
 | Slice | n | Accuracy | ECE | Brier | AURC |
 |---|---:|---:|---:|---:|---:|
-| **overall** | 160 | 0.781 | **0.170** | 0.184 | 0.084 |
-| action_risk | 45 | 0.867 | 0.135 | 0.134 | 0.040 |
-| intent | 15 | 0.933 | 0.143 | 0.095 | 0.007 |
-| support_triage | 100 | 0.720 | 0.200 | 0.220 | 0.116 |
+| **overall** | 203 | 0.793 | **0.156** | 0.173 | 0.073 |
+| action_risk | 60 | 0.900 | 0.101 | 0.100 | 0.025 |
+| intent | 19 | 0.895 | 0.191 | 0.150 | 0.053 |
+| support_triage | 124 | 0.726 | 0.182 | 0.212 | 0.109 |
 
-Reading this honestly: the model is right about 78% of the time, but its
-confidence is off by 0.170 on average (ECE). That gap is the problem poorjev
+Reading this honestly: the model is right about 79% of the time, but its
+confidence is off by 0.156 on average (ECE). That gap is the problem poorjev
 exists to fix. The raw probabilities out of any classifier, local or LLM, are
 not trustworthy as-is.
 
@@ -42,9 +42,9 @@ other four and the calibrated ECE is measured on the held-out fold, so the
 
 | Metric | Raw | Calibrated | |
 |---|---:|---:|---|
-| Accuracy | 0.781 | 0.781 | unchanged (temperature is monotonic) |
-| **ECE** | **0.170** | **0.071** | **58% lower calibration error** |
-| Temperature (mean) | 1.00 | 2.71 | > 1: the model was overconfident, softened |
+| Accuracy | 0.793 | 0.793 | unchanged (temperature is monotonic) |
+| **ECE** | **0.156** | **0.072** | **54% lower calibration error** |
+| Temperature (mean) | 1.00 | 2.59 | > 1: the model was overconfident, softened |
 
 ![reliability before and after](docs/reliability_before_after.png)
 
@@ -58,16 +58,16 @@ Set a risk budget and abstain below the matching confidence threshold:
 
 | Target risk | Coverage | Threshold |
 |---|---:|---:|
-| <= 0.10 | 0.55 | 0.830 |
+| <= 0.10 | 0.64 | 0.735 |
 
-At a 10% error budget the model confidently answers 55% of decisions and
+At a 10% error budget the model confidently answers 64% of decisions and
 abstains on the rest (the honest "I don't know, escalate" signal). Full curve:
 
 ![risk coverage](docs/risk_coverage.png)
 
 ### Honest notes
 
-- The after-ECE is 0.071, not below 0.05. That is the real cross-validated
+- The after-ECE is 0.072, not below 0.05. That is the real cross-validated
   number on a small set; we report it as measured rather than tuning to a
   target. A per-task or per-question temperature (instead of one global scalar)
   would likely push it lower, and is a natural next step.

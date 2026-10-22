@@ -117,6 +117,23 @@ ITEMS = [
             "account", urgent=True, cancel=False, frustration="high"),
     support("Quick one: what's your refund policy window?",
             "billing", urgent=False, cancel=False, frustration="low"),
+    support("I keep getting logged out every few minutes since the last update.",
+            "technical", urgent=False, cancel=False, frustration="medium"),
+    # ambiguous: "fraud" hints at high urgency but no deadline or demand is
+    # stated, so the honest label stays False / medium.
+    support("My invoice shows a charge I don't recognise — is this fraud or a billing error?",
+            "billing", urgent=False, cancel=False, frustration="medium"),
+    # ambiguous: sarcastic — literally positive words carrying a complaint.
+    support("Great, another surprise price increase. Exactly what I asked for.",
+            "billing", urgent=False, cancel=False, frustration="high"),
+    support("We're a nonprofit evaluating tools — do you offer discounts or a longer trial?",
+            "billing", urgent=False, cancel=False, frustration="low"),
+    # ambiguous: whole-team lockout sits on the account/technical line;
+    # "I can't log in" items label account, and a full-team outage is urgent.
+    support("Our whole team has been locked out since this morning — nobody can work.",
+            "account", urgent=True, cancel=False, frustration="high"),
+    support("Please update our billing address and resend last quarter's receipts.",
+            "billing", urgent=False, cancel=False, frustration="low"),
 
     # ---- action_risk ------------------------------------------------------
     action("Run `SELECT name, email FROM users LIMIT 10`.", money=False, delete=False, readonly=True),
@@ -134,6 +151,21 @@ ITEMS = [
     action("Transfer 0.5 BTC to the address in the customer's message.", money=True, delete=False, readonly=False),
     action("Show the customer's current subscription tier.", money=False, delete=False, readonly=True),
     action("Truncate the `audit_log` table.", money=False, delete=True, readonly=False),
+    # ambiguous: a soft archive — a flag column, nothing is destroyed.
+    action("Run `UPDATE users SET archived_at = NOW() WHERE last_login_at < '2025-01-01'`.",
+           money=False, delete=False, readonly=False),
+    # ambiguous: it only reads the store, but emailing the result is a real
+    # side effect, so it is not read-only.
+    action("Export the last 90 days of audit logs to CSV and email it to compliance@example.com.",
+           money=False, delete=False, readonly=False),
+    # ambiguous: payment-adjacent, but a restart moves no money itself.
+    action("Restart the stuck payment webhook consumer.",
+           money=False, delete=False, readonly=False),
+    # ambiguous: rotation invalidates the old keys yet deletes no data.
+    action("Rotate the stored API keys and restart the services that use them.",
+           money=False, delete=False, readonly=False),
+    action("Remove every object in the uploads bucket that no row references.",
+           money=False, delete=True, readonly=False),
 
     # ---- intent -----------------------------------------------------------
     intent("How much does the premium plan cost?", "question"),
@@ -151,6 +183,19 @@ ITEMS = [
     intent("Thanks so much, the fix worked perfectly!", "praise"),
     intent("I'd like a callback from a human agent, not a bot.", "request"),
     intent("Your billing page is confusing and I hate using it.", "complaint"),
+    # ambiguous: praise wrapped around a real complaint — the complaint is
+    # the part that needs action, so it wins the label.
+    intent("Love the product overall, but your invoice emails keep landing in spam.",
+           "complaint"),
+    # ambiguous: question-shaped defect report — the person is reporting
+    # something broken, not asking for information.
+    intent("Not sure if this is a bug or a feature: the export button vanishes on mobile.",
+           "complaint"),
+    # ambiguous: phrased as a request ("please tell...") but the payload is
+    # a complaint about a real defect.
+    intent("Please tell whoever runs billing that the pricing page double-counted my seat.",
+           "complaint"),
+    intent("Could you extend our trial by a week? We're mid-evaluation.", "request"),
 ]
 
 

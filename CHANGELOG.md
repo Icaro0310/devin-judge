@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- 15 hand-labelled items in `evalset/` (70 items / 203 labelled decisions,
+  was 55 / 160): 6 `support_triage`, 5 `action_risk`, 4 `intent`, including
+  deliberately ambiguous cases (sarcasm, soft-delete vs destroy,
+  request-shaped complaints) marked `# ambiguous:` in `source.py` with the
+  judgment call made.
+
+### Changed
+
+- Headline numbers re-measured on the grown set: accuracy 0.793, ECE
+  0.156 -> 0.072 calibrated (temperature 2.59), risk-<=0.10 coverage 0.64 @
+  threshold 0.735. `RESULTS.md`, the README metrics table + badge,
+  `calibration.json` and both `docs/*.png` plots regenerated with
+  `poordjaevin eval` / `calibrate --plots`. The `crossbench/` table keeps
+  its 55-item / 160-decision numbers with an explicit snapshot note — a
+  four-system re-run on the grown set has not been done.
+
 ## [0.1.3] - 2026-10-16
 
 ### Fixed

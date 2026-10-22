@@ -1,6 +1,7 @@
 """
-Run ../evalset/tasks.jsonl (poordjaevin's own 55-item / 160-decision
-multi-primitive set: Choice + Score + Noul) through laya, von, or djaevin, scored
+Run ../evalset/tasks.jsonl (poordjaevin's own multi-primitive set: Choice +
+Score + Noul — 55 items / 160 decisions when these results were measured,
+grown since) through laya, von, or djaevin, scored
 with poordjaevin's own metrics.py so every system is graded by identical code.
 
 For poordjaevin itself, just use its own CLI: `poordjaevin eval --set ../evalset/tasks.jsonl`
