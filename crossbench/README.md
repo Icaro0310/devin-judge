@@ -26,8 +26,11 @@ cherry-picked, and the harness was not reshaped to force a particular winner
 
 ## Test sets
 
-- `../evalset/tasks.jsonl` — poordjaevin's own 55-item / 160-decision set (already
-  in this repo), reused here as a neutral cross-system set.
+- `../evalset/tasks.jsonl` — poordjaevin's own multi-primitive set (already
+  in this repo), reused here as a neutral cross-system set. **The results in
+  `results/typed_decisions_*.json` were measured on the 55-item /
+  160-decision snapshot**; the shipped set has since grown to 70 items /
+  203 decisions.
 - `data/banking77_sample.jsonl` — 154 items (2 per class), stratified sample
   of [Banking77](https://github.com/PolyAI-LDN/task-specific-datasets)
   (CC-BY-4.0), a public 77-way intent classification set — the
@@ -79,7 +82,8 @@ this whole benchmark costs a few cents). No key is committed to this repo.
 
 ## Limits, stated up front
 
-- 154 and 160 decisions respectively — small samples; treat differences under
+- 154 and 160 decisions respectively (160 was the evalset size when the
+  results were measured; see above) — small samples; treat differences under
   a few points as noise, not a ranking.
 - The multi-primitive set is hand-labelled by one person (support-ticket
   flavored). Banking77 is the standard, public check.

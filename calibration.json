@@ -1,7 +1,8 @@
 {
-  "temperature": 2.7,
+  "temperature": 2.6,
   "target_risk": 0.1,
-  "abstain_threshold": 0.8300988419842116,
-  "ece_before": 0.1696346238722965,
-  "ece_after": 0.07081383940474953
+  "abstain_threshold": 0.7354358708363862,
+  "ece_before": 0.1561923286870982,
+  "ece_after": 0.07202506008253182,
+  "backend": "local_nli"
 }

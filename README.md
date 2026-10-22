@@ -43,7 +43,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT license">
   <img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="Python 3.10+">
-  <img src="https://img.shields.io/badge/ECE-0.170%20%E2%86%92%200.071-orange" alt="ECE 0.170 to 0.071">
+  <img src="https://img.shields.io/badge/ECE-0.156%20%E2%86%92%200.072-orange" alt="ECE 0.156 to 0.072">
   <img src="https://img.shields.io/badge/API%20key-not%20required-blueviolet" alt="no API key required">
 </p>
 
@@ -57,7 +57,7 @@ Part of the [awesome-devin](https://github.com/Icaro0310/awesome-devin) ecosyste
 
 **Your model's `0.9` is a vibe. poordjaevin's `0.9` is a measurement.**
 
-Every LLM-in-JSON-mode hands you a confidence score and hopes you don't check it. poordjaevin checks it. On the shipped eval set it cuts calibration error (ECE) from **0.170 to 0.071** with zero loss of accuracy, and it runs on your laptop with no API key.
+Every LLM-in-JSON-mode hands you a confidence score and hopes you don't check it. poordjaevin checks it. On the shipped eval set it cuts calibration error (ECE) from **0.156 to 0.072** with zero loss of accuracy, and it runs on your laptop with no API key.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/Icaro0310/devin-judge/main/docs/reliability_before_after.png" alt="Reliability diagram: raw confidences are overconfident, calibrated confidences hug the diagonal" width="760">
@@ -267,6 +267,11 @@ Independently measured, not self-reported — see [`crossbench/`](crossbench/) f
 | Accuracy, multi-primitive set (n=160) | **0.906** | 0.775 | 0.775 | 0.781 |
 | ECE, multi-primitive set (lower better) | **0.045** | 0.108 | 0.215 | 0.071 |
 
+The multi-primitive rows were measured on the 55-item / 160-decision
+snapshot of `evalset/tasks.jsonl`; the shipped set has since grown to 70
+items / 203 decisions (see `evalset/README.md`). Banking77 numbers are
+unaffected; a full four-system re-run on the grown set has not been done.
+
 Read straight, because that's the point of doing this:
 
 - **Jev wins the multi-primitive set outright** — best accuracy and best
@@ -334,14 +339,14 @@ poordjaevin eval       --set evalset/tasks.jsonl          # accuracy, ECE, Brier
 poordjaevin calibrate  --set evalset/tasks.jsonl --plots  # before/after ECE + the diagrams
 ```
 
-On the shipped eval set (55 hand-labelled items, 160 decisions), local NLI backend, keyless:
+On the shipped eval set (70 hand-labelled items, 203 decisions), local NLI backend, keyless:
 
 | Metric | Raw | Calibrated |
 |---|---:|---:|
-| Accuracy | 0.781 | 0.781 |
-| **ECE (calibration error)** | **0.170** | **0.071** |
-| Brier | 0.184 | lower |
-| Temperature | 1.00 | 2.71 |
+| Accuracy | 0.793 | 0.793 |
+| **ECE (calibration error)** | **0.156** | **0.072** |
+| Brier | 0.173 | lower |
+| Temperature | 1.00 | 2.59 |
 
 Temperature is fit by 5-fold cross-validation, so the "after" number is measured on held-out data, never on data it was fit on. Full tables and the honest limitations are in [RESULTS.md](RESULTS.md).
 
@@ -355,7 +360,7 @@ Set a risk budget and poordjaevin abstains on its least confident decisions inst
   <img src="https://raw.githubusercontent.com/Icaro0310/devin-judge/main/docs/risk_coverage.png" alt="Risk-coverage curve: error rate drops as the model abstains on low-confidence decisions" width="440">
 </p>
 
-At a 10% error budget it confidently answers 55% of decisions and escalates the rest. That is the natural bridge from System One (fast automatic answer) to System Two (a human, or a bigger model).
+At a 10% error budget it confidently answers 64% of decisions and escalates the rest. That is the natural bridge from System One (fast automatic answer) to System Two (a human, or a bigger model).
 
 ## Real examples
 
@@ -373,7 +378,7 @@ No hype. Here is what this is not.
 
 - **Not as fast as Jev.** Jev uses a custom model. poordjaevin uses commodity ones. We report latency, we do not market it.
 - **The eval set is small** (tens of items, one labeller, English, support flavoured). Enough to show calibration direction and schema validity, not a leaderboard.
-- **After-ECE is 0.071, not below 0.05.** That is the real cross-validated number, reported as measured. Per-question temperature would likely push it lower.
+- **After-ECE is 0.072, not below 0.05.** That is the real cross-validated number, reported as measured. Per-question temperature would likely push it lower.
 - **The local model is moderately intelligent.** It does real semantic entailment, not deep reasoning. Calibration and abstention are what make that safe.
 - **Jev is currently ahead, measured, not assumed, and so is `von` on one axis.** The [cross-system benchmark](crossbench/) has Jev winning the multi-primitive set outright and leading Banking77 calibration; `von` beats both Jev and poordjaevin on Banking77 accuracy. poordjaevin's honest position is "best fully local/free option on the mixed decision-primitive benchmark," not "beats Jev" and not "beats every open alternative everywhere."
 - **Temperature scaling doesn't fix everything.** At Banking77's 77-way cardinality, a proper cross-validated temperature refit barely moves ECE (0.414 → 0.416) — the miscalibration there is structural to the small NLI backend at high option counts, not a scalar you can fit away. See [`crossbench/results/banking77_poordjaevin_recalibrated.json`](crossbench/results/banking77_poordjaevin_recalibrated.json).
