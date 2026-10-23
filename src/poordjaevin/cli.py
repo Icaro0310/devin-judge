@@ -37,7 +37,12 @@ def _env_or_local_raw_client():
         from .client import Client
         return Client()
     from .mcp_server import _select_backend
-    return Client(backend=_select_backend())
+    from .policy import Policy
+    backend = _select_backend()
+    # Env-selected backend: the operator's choice is the authorization
+    # for remote inference that the default Policy() denies.
+    return Client(backend=backend, policy=Policy(allow_remote=(
+        backend is not None and getattr(backend, "is_remote", True))))
 
 
 def _fmt(summary: dict) -> str:

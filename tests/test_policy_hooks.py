@@ -8,7 +8,7 @@ payloads, stay inert by default, and propagate hook errors loudly.
 
 import pytest
 
-from poordjaevin import Choice, Client, Noul, Policy, PolicyError, Score
+from poordjaevin import Choice, Client, Noul, Policy, PolicyError
 from poordjaevin.client import HOOK_POINTS
 
 
@@ -35,10 +35,35 @@ def _client(**kw):
 # Policy
 # --------------------------------------------------------------------- #
 
-def test_default_policy_preserves_current_behavior():
-    client = _client()   # no policy at all
-    ans = client.ask("s", {"q": Noul("x")})["q"]
-    assert ans.prob == pytest.approx(0.9)
+def test_default_policy_denies_remote_without_authorization():
+    # policy omitted -> default closed Policy(), not "no check"
+    backend = FakeBackend([0.9], is_remote=True, estimated_cost=0.0)
+    client = Client(backend=backend)
+    with pytest.raises(PolicyError) as e:
+        client.ask("s", {"q": Noul("x")})
+    assert e.value.rule == "remote_denied"
+    assert backend.calls == 0          # never invoked: fail-closed
+
+
+def test_default_policy_denies_undeclared_destination():
+    # is_remote undeclared -> destination unknown -> denied, distinct rule
+    backend = FakeBackend([0.9])       # no attrs set
+    client = Client(backend=backend)
+    with pytest.raises(PolicyError) as e:
+        client.ask("s", {"q": Noul("x")})
+    assert e.value.rule == "unknown_destination"
+    assert backend.calls == 0
+
+
+def test_default_policy_passes_declared_local():
+    client = _client()   # is_remote=False declared: local path preserved
+    assert client.ask("s", {"q": Noul("x")})["q"].prob == pytest.approx(0.9)
+
+
+def test_explicit_authorization_allows_remote():
+    backend = FakeBackend([0.9], is_remote=True, estimated_cost=0.0)
+    client = Client(backend=backend, policy=Policy(allow_remote=True))
+    assert client.ask("s", {"q": Noul("x")})["q"].prob == pytest.approx(0.9)
 
 
 def test_allow_remote_false_blocks_remote_backend():
@@ -56,11 +81,12 @@ def test_allow_remote_false_passes_local_backend():
 
 
 def test_undeclared_backend_is_treated_as_remote():
-    # no is_remote attribute -> conservative True under allow_remote=False
+    # no is_remote attribute -> unknown destination under allow_remote=False
     backend = FakeBackend([0.9])       # no attrs set
     client = Client(backend=backend, policy=Policy(allow_remote=False))
-    with pytest.raises(PolicyError):
+    with pytest.raises(PolicyError) as e:
         client.ask("s", {"q": Noul("x")})
+    assert e.value.rule == "unknown_destination"
     assert backend.calls == 0
 
 
@@ -190,6 +216,8 @@ def test_on_error_fires_on_backend_failure_and_propagates():
         client.ask("s", {"q": Noul("x")})
     assert errors[0]["stage"] == "backend"
     assert errors[0]["error_type"] == "ConnectionError"
+    assert errors[0]["error_code"] == "BACKEND_FAILURE"
+    assert errors[0]["retryable"] is True   # ConnectionError is transient
 
 
 def test_on_error_fires_on_policy_denial():
@@ -201,15 +229,45 @@ def test_on_error_fires_on_policy_denial():
     with pytest.raises(PolicyError):
         client.ask("s", {"q": Noul("x")})
     assert errors[0]["stage"] == "policy"
+    assert errors[0]["error_code"] == "POLICY_DENIED"
+    assert errors[0]["policy_rule"] == "remote_denied"
+
+
+def test_on_error_never_carries_raw_message_or_secret():
+    # A backend error message may embed state fragments; hooks must receive
+    # the structured event only — truncation is not redaction.
+    secret = "sk-test-SECRET-fragment-9x2"
+
+    class LeakyBackend:
+        is_remote = False
+        estimated_cost = 0.0
+
+        def entail_probs(self, pairs):
+            raise RuntimeError(f"downstream choked on {secret} badly")
+
+    errors = []
+    client = Client(backend=LeakyBackend(),
+                    hooks={"on_error": lambda ctx: errors.append(ctx)})
+    with pytest.raises(RuntimeError):
+        client.ask("s", {"q": Noul("x")})
+    assert secret not in str(errors)
+    assert "detail" not in errors[0]
+    assert set(errors[0]) <= {
+        "event", "stage", "backend", "error_code",
+        "error_type", "retryable", "policy_rule"}
+    assert errors[0]["error_code"] == "BACKEND_FAILURE"
+    assert errors[0]["retryable"] is False
 
 
 def test_on_error_fires_on_short_score_count():
     errors = []
-    client = Client(backend=FakeBackend([0.9, 0.9]),   # 2 scores for 1 pair
+    client = Client(backend=FakeBackend([0.9, 0.9], is_remote=False,
+                                        estimated_cost=0.0),  # 2 for 1 pair
                     hooks={"on_error": lambda ctx: errors.append(ctx)})
     with pytest.raises(RuntimeError):
         client.ask("s", {"q": Noul("x")})
     assert errors[0]["stage"] == "backend"
+    assert errors[0]["error_code"] == "BACKEND_FAILURE"
 
 
 def test_hook_exception_propagates_loudly():
@@ -235,3 +293,23 @@ def test_notify_disagreement_fires_on_disagreement():
 def test_hook_points_constant():
     assert HOOK_POINTS == ("before_judge", "before_backend", "after_backend",
                            "after_calibration", "on_disagreement", "on_error")
+
+
+# --------------------------------------------------------------------- #
+# Operator-selected backend = the explicit remote authorization
+# --------------------------------------------------------------------- #
+
+def test_build_client_authorizes_operator_selected_remote(monkeypatch):
+    # POORDJAEVIN_BACKEND=acp is the operator's explicit choice: the remote
+    # backend it yields is authorized, everything else stays closed.
+    monkeypatch.setenv("POORDJAEVIN_BACKEND", "acp")
+    from poordjaevin import mcp_server
+    client = mcp_server.build_client(calibrator_path=None, profiles_path=None)
+    assert client._policy.allow_remote is True
+
+
+def test_build_client_keeps_closed_policy_for_local(monkeypatch):
+    monkeypatch.setenv("POORDJAEVIN_BACKEND", "nli")
+    from poordjaevin import mcp_server
+    client = mcp_server.build_client(calibrator_path=None, profiles_path=None)
+    assert client._policy.allow_remote is False

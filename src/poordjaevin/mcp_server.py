@@ -355,6 +355,15 @@ def build_client(calibrator_path: str | None = "calibration.json", backend=None,
             file=sys.stderr,
         )
         profiles_doc = {}
+    if policy is None:
+        # An operator-selected remote backend (POORDJAEVIN_BACKEND) is the
+        # explicit authorization Policy() requires; the default local NLI
+        # path keeps the closed default. Undeclared-destination backends
+        # selected this way are authorized by the same operator choice.
+        from .policy import Policy
+        policy = Policy(allow_remote=(
+            selected_backend is not None
+            and getattr(selected_backend, "is_remote", True)))
     return Client(
         backend=selected_backend,
         temperature=temperature,

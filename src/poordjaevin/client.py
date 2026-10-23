@@ -56,7 +56,10 @@ class Client:
         self._profiles = (profiles or {}).get("profiles") or {}
         # Policy checks run before the backend is invoked (privacy,
         # permissions, availability, budget). None = permissive default.
-        self._policy = policy
+        # An omitted policy means the default closed one, never "no check":
+        # remote or undeclared-destination backends need explicit
+        # authorization, and skipping the check cannot grant it.
+        self._policy = policy if policy is not None else Policy()
         # Lifecycle hooks, HOOK_POINTS keys -> callables. Inert by default.
         self._hooks = {k: v for k, v in (hooks or {}).items()
                        if k in HOOK_POINTS and callable(v)}
@@ -83,9 +86,27 @@ class Client:
         return hook(ctx) if hook else None
 
     def _on_error(self, stage: str, exc: Exception) -> None:
-        self._fire("on_error", {"stage": stage,
-                                "error_type": type(exc).__name__,
-                                "detail": str(exc)[:200]})
+        # Hooks get a structured event only: no raw message, ever. Error
+        # text can embed state fragments, and truncation is not redaction.
+        if isinstance(exc, PolicyError):
+            code = "POLICY_DENIED"
+        elif isinstance(exc, (ValueError, TypeError)):
+            code = "VALIDATION_ERROR"
+        elif stage == "backend":
+            code = "BACKEND_FAILURE"
+        else:
+            code = "INTERNAL"
+        ctx = {
+            "event": "on_error",
+            "stage": stage,
+            "backend": type(self._backend).__name__ if self._backend else None,
+            "error_code": code,
+            "error_type": type(exc).__name__,
+            "retryable": isinstance(exc, (TimeoutError, ConnectionError)),
+        }
+        if isinstance(exc, PolicyError):
+            ctx["policy_rule"] = exc.rule
+        self._fire("on_error", ctx)
 
     def notify_disagreement(self, ctx: dict) -> None:
         """Fire on_disagreement hooks. Consumers (the log, the MCP server)
@@ -124,14 +145,13 @@ class Client:
 
         # Policy BEFORE the backend is touched: the backend property also
         # lazy-builds the default, so this is the availability check too.
-        if self._policy:
-            try:
-                self._policy.check(
-                    self.backend,
-                    calibrated=self._calibrated_source is not None)
-            except Exception as exc:
-                self._on_error("policy", exc)
-                raise
+        try:
+            self._policy.check(
+                self.backend,
+                calibrated=self._calibrated_source is not None)
+        except Exception as exc:
+            self._on_error("policy", exc)
+            raise
 
         pairs: list[tuple[str, str]] = []
         plan: list[tuple[str, object, int, int, str]] = []  # name, prim, start, count, mode

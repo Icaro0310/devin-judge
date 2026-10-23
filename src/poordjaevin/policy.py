@@ -4,11 +4,17 @@ Order matters: privacy, permissions, availability and budget are all
 checked BEFORE the backend is invoked. A model's confidence can never be
 an argument for sending data somewhere — the policy runs first, always.
 
-Defaults preserve current behavior: ``Policy()`` denies nothing. The
-unsafe move is opting IN to restrictions, never out.
+Defaults fail closed on privacy: ``Policy()`` denies remote backends and
+backends whose destination is undeclared. Remote inference requires
+explicit authorization (``allow_remote=True``, granted by the caller or
+by an operator-selected backend in build_client). The other dimensions
+stay permissive unless set, so a declared-local backend runs exactly as
+before.
 
 Backends declare two attributes used here:
-  ``is_remote``       — does the payload leave this machine? (bool)
+  ``is_remote``       — does the payload leave this machine? (bool;
+                        undeclared means unknown destination -> denied
+                        unless remote is authorized)
   ``estimated_cost``  — provable per-call cost, or None for "unknown".
 
 An unknown cost under a finite budget is denied (fail-closed): a backend
@@ -34,11 +40,16 @@ class PolicyError(RuntimeError):
 
 @dataclass(frozen=True)
 class Policy:
-    """Constraints evaluated before any backend call. All fields default
-    to permissive so existing clients behave exactly as before."""
+    """Constraints evaluated before any backend call.
 
-    allow_remote: bool = True
-    """False: only backends with ``is_remote = False`` may run (privacy)."""
+    Privacy defaults to closed: remote and undeclared-destination
+    backends are denied unless ``allow_remote`` authorizes them. The
+    other fields default to permissive so declared-local backends keep
+    their current behavior."""
+
+    allow_remote: bool = False
+    """True: remote and unknown-destination backends may run (the explicit
+    authorization). False: only declared ``is_remote = False`` backends."""
 
     allowed_backends: tuple | None = None
     """Optional tuple of permitted backend class names (permissions).
@@ -58,9 +69,13 @@ class Policy:
         if self.allowed_backends is not None and name not in self.allowed_backends:
             raise PolicyError("backend_not_allowed",
                               f"{name} not in allowed_backends")
-        if not self.allow_remote and getattr(backend, "is_remote", True):
-            # an undeclared backend is treated as remote: privacy fails closed
-            raise PolicyError("remote_denied", f"{name} is remote")
+        remote = getattr(backend, "is_remote", None)
+        if remote is not False and not self.allow_remote:
+            # destination unknown or declared remote: privacy fails closed
+            rule = "remote_denied" if remote else "unknown_destination"
+            detail = f"{name} is remote" if remote else \
+                f"{name} does not declare is_remote"
+            raise PolicyError(rule, detail)
         if self.max_cost is not None:
             est = getattr(backend, "estimated_cost", None)
             if est is None or est > self.max_cost:

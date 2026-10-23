@@ -41,10 +41,10 @@ from .primitives import (
 __version__ = "0.1.3"
 
 __all__ = [
+    "HOOK_POINTS",
     "Choice",
     "ChoiceAnswer",
     "Client",
-    "HOOK_POINTS",
     "Noul",
     "NoulAnswer",
     "Policy",

@@ -270,8 +270,11 @@ def test_client_drops_calibration_when_source_changes(endpoint):
         confidence_source = "local_nli"
 
     backend = VscodeLmBackend(fallback=_NliLikeFallback())
+    # declared-remote backend: the test is the explicit authorization
+    from poordjaevin.policy import Policy
     client = Client(backend=backend, temperature=0.125, abstain_threshold=0.9,
-                    calibrated_source="self_report")
+                    calibrated_source="self_report",
+                    policy=Policy(allow_remote=True))
     # Endpoint answered with raw 0.4: temperature 0.125 sharpens it to ~0.96
     # confidence in the "no" direction, above the abstain threshold.
     ans = client.ask("state", {"q": Noul("is X")})["q"]
