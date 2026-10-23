@@ -49,7 +49,8 @@ def test_mark_disagreement_promotes_to_examples(db):
     decision_id = djaevin_log.log_decision(
         "classify", "Servico terrivel, nunca mais volto.", "bom", 0.44, True)
     out = djaevin_log.mark_disagreement(decision_id, "mau")
-    assert out == {"ok": True, "promoted_to_examples": True}
+    assert out == {"ok": True, "promoted_to_examples": True,
+                   "rejection_reason": None}
     examples = djaevin_log.get_few_shot("classify", "servico horrivel")
     assert examples[0]["choice"] == "mau"
 
@@ -57,7 +58,8 @@ def test_mark_disagreement_promotes_to_examples(db):
 def test_mark_disagreement_without_correct_choice(db):
     decision_id = djaevin_log.log_decision("judge", "2+2=4", "no", 0.9, False)
     out = djaevin_log.mark_disagreement(decision_id)
-    assert out == {"ok": True, "promoted_to_examples": False}
+    assert out == {"ok": True, "promoted_to_examples": False,
+                   "rejection_reason": "no_ground_truth"}
     out = djaevin_log.mark_disagreement(9999)
     assert out["ok"] is False
 
@@ -77,10 +79,12 @@ def test_few_shot_block_format(db):
 
 
 def test_few_shot_is_scoped_per_tool(db):
-    decision_id = djaevin_log.log_decision("rate", "texto x", "1", 0.5, False)
+    decision_id = djaevin_log.log_decision(
+        "rate", "texto de exemplo suficiente", "1", 0.5, False)
     djaevin_log.mark_disagreement(decision_id, "5")
     assert djaevin_log.get_few_shot("judge", "texto x") == []
-    assert djaevin_log.get_few_shot("rate", "texto x")[0]["choice"] == "5"
+    assert djaevin_log.get_few_shot(
+        "rate", "texto de exemplo")[0]["choice"] == "5"
 
 
 def test_calibrate_reports_disagreements(db):
@@ -140,3 +144,109 @@ def test_usage_summary_tracks_model_and_cost(db):
     assert out["paid_decisions"] == 1
     paid = next(m for m in out["by_model"] if m["model"] == "paid-model")
     assert paid["cost"] == 3.5
+
+
+# --- E2E: ciclo de aprendizagem incremental --------------------------------
+# Cadeia auditada: decisao -> desacordo -> candidato -> gate de promocao ->
+# djaevin_examples -> consumidor few-shot. Cobre os 6 casos exigidos pela
+# auditoria do pipeline (2026-10-23): elegivel chega ao consumidor, triviais/
+# fora-de-dominio/near-dup/sem-ground-truth rejeitados, idempotente,
+# sem dados sensiveis fora do schema do exemplo.
+
+
+def test_learning_cycle_e2e_eligible_reaches_consumer(db):
+    """Positive eligible candidate traverses the whole chain and is served
+    to the few-shot consumer — not just stored."""
+    did = djaevin_log.log_decision(
+        "judge", "The CLAIM below is supported by the provided context.",
+        "yes", 0.95, False)
+    out = djaevin_log.mark_disagreement(did, "no")
+    assert out["promoted_to_examples"] is True
+    assert out["rejection_reason"] is None
+    # consumer side: a similar statement retrieves and injects the example
+    block = djaevin_log.few_shot_block(
+        "judge", "The CLAIM is supported by the provided context.")
+    assert 'Correto: "no"' in block
+    assert "Exemplos validados" in block
+
+
+def test_learning_cycle_rejects_trivial_input(db):
+    did = djaevin_log.log_decision("judge", "sim", "yes", 0.95, False)
+    out = djaevin_log.mark_disagreement(did, "no")
+    assert out["promoted_to_examples"] is False
+    assert out["rejection_reason"] == "trivial"
+    # o flag disagreed marca-se na mesma — so a promocao e bloqueada
+    import sqlite3
+    con = sqlite3.connect(djaevin_log._db_path())
+    assert con.execute(
+        "SELECT disagreed FROM djaevin_decisions WHERE id = ?",
+        (did,)).fetchone()[0] == 1
+    con.close()
+
+
+def test_learning_cycle_rejects_out_of_domain_choice(db):
+    did = djaevin_log.log_decision(
+        "judge", "The claim is supported by context here.", "yes", 0.95,
+        False)
+    out = djaevin_log.mark_disagreement(did, "maybe")
+    assert out["rejection_reason"] == "out_of_domain"
+    assert djaevin_log.get_few_shot("judge", "claim supported") == []
+
+
+def test_learning_cycle_free_domain_tool_accepts_any_choice(db):
+    """classify/rate/decide have no fixed domain — any non-empty choice is
+    promotable (same rule as the second-pass curator)."""
+    did = djaevin_log.log_decision(
+        "classify", "Servico horrivel, nunca mais volto.", "bom", 0.9, False)
+    out = djaevin_log.mark_disagreement(did, "pessimo")
+    assert out["promoted_to_examples"] is True
+
+
+def test_learning_cycle_rejects_near_duplicate(db):
+    base = "The claim that backups ran is supported by the context."
+    did1 = djaevin_log.log_decision("judge", base, "yes", 0.95, False)
+    assert djaevin_log.mark_disagreement(did1, "no")[
+        "promoted_to_examples"] is True
+    # second decision with a near-identical input (Jaccard >= 0.9) is a
+    # duplicate candidate, not new material
+    did2 = djaevin_log.log_decision(
+        "judge", base + " really", "yes", 0.95, False)
+    out = djaevin_log.mark_disagreement(did2, "no")
+    assert out["rejection_reason"] == "near_duplicate"
+    assert len(djaevin_log.get_few_shot("judge", "backups")) == 1
+
+
+def test_learning_cycle_idempotent_on_repeated_marks(db):
+    did = djaevin_log.log_decision(
+        "judge", "The claim is supported by the context provided.",
+        "yes", 0.95, False)
+    assert djaevin_log.mark_disagreement(did, "no")[
+        "promoted_to_examples"] is True
+    # re-marking the same decision hits the near-duplicate gate — the store
+    # stays at one example, never stacks copies
+    out = djaevin_log.mark_disagreement(did, "no")
+    assert out["rejection_reason"] == "near_duplicate"
+    import sqlite3
+    con = sqlite3.connect(djaevin_log._db_path())
+    assert con.execute("SELECT COUNT(*) FROM djaevin_examples").fetchone()[
+        0] == 1
+    con.close()
+
+
+def test_learning_cycle_example_schema_carries_no_extra_fields(db):
+    """The promoted example row holds only (tool, input_text,
+    correct_choice, added_ts) — no confidence, model, cost or premise
+    material leaks into the few-shot store."""
+    did = djaevin_log.log_decision(
+        "judge", "The claim is supported by the given context.", "yes",
+        0.95, False, model="swe-2", cost=0.0)
+    djaevin_log.mark_disagreement(did, "no")
+    import sqlite3
+    con = sqlite3.connect(djaevin_log._db_path())
+    cols = [r[1] for r in con.execute(
+        "PRAGMA table_info(djaevin_examples)").fetchall()]
+    row = con.execute("SELECT * FROM djaevin_examples").fetchone()
+    con.close()
+    assert cols == ["id", "tool", "input_text", "correct_choice",
+                    "added_ts"]
+    assert len(row) == 5
