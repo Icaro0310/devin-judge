@@ -47,7 +47,8 @@ def _score_one(spec: dict, answer) -> DecisionRecord:
         dist = (1.0 - answer.prob, answer.prob)
         gold_index = 1 if gold else 0
         return DecisionRecord(answer.confidence, correct, prob_gold, n_classes=2,
-                              dist=dist, gold_index=gold_index)
+                              dist=dist, gold_index=gold_index,
+                              decision_type=t)
     # choice / score share the same shape
     order = spec["options"] if t == "choice" else spec["levels"]
     probs = answer.probs if t == "choice" else answer.distribution
@@ -56,7 +57,8 @@ def _score_one(spec: dict, answer) -> DecisionRecord:
     dist = tuple(probs[k] for k in order)
     gold_index = order.index(gold)
     return DecisionRecord(answer.confidence, correct, prob_gold, n_classes=len(probs),
-                          dist=dist, gold_index=gold_index)
+                          dist=dist, gold_index=gold_index,
+                          decision_type=t)
 
 
 def evaluate(path: str, client: Client | None = None, verbose: bool = False):
@@ -78,6 +80,7 @@ def evaluate(path: str, client: Client | None = None, verbose: bool = False):
                 r.confidence, r.correct, r.prob_gold, r.n_classes,
                 task=item["task"], question=name,
                 dist=r.dist, gold_index=r.gold_index,
+                decision_type=r.decision_type,
             ))
         if verbose:
             print(f"  {item['id']}: " + ", ".join(

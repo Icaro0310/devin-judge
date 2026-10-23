@@ -82,6 +82,7 @@ def _recalibrate_record(r: DecisionRecord, T: float) -> DecisionRecord:
         n_classes=r.n_classes,
         task=r.task, question=r.question,
         dist=tuple(q), gold_index=r.gold_index,
+        decision_type=r.decision_type,
     )
 
 
@@ -162,3 +163,111 @@ def summarize_calibration(raw: list[DecisionRecord], k: int = 5, target_risk: fl
         "risk_at_target": risk,
         "calibrated_records": calibrated,
     }
+
+
+# --------------------------------------------------------------------------- #
+# Per-slice calibration profiles
+# --------------------------------------------------------------------------- #
+#
+# One global temperature assumes every task and decision type shares the same
+# miscalibration. That is not true in general: confidence sources differ per
+# question shape and per slice. Profiles key a fitted calibrator to
+# (backend, task, decision_type) so e.g. action_risk/noul and
+# support_triage/score can carry different temperatures.
+#
+# Slices with fewer than MIN_PROFILE_SAMPLES usable records stay "advisory":
+# a temperature fit on a handful of points is not a validated calibrator, it
+# is noise with a number attached. Advisory profiles report what little we
+# know but never gate; selection falls back to the global profile, which has
+# the full evalset behind it.
+
+MIN_PROFILE_SAMPLES = 30
+
+
+def wilson_ci(p: float, n: int, z: float = 1.96) -> tuple[float, float]:
+    """Wilson score interval for a binomial proportion. Valid at small n,
+    unlike the normal approximation which can leave [0, 1]."""
+    if n <= 0:
+        return 0.0, 1.0
+    z2 = z * z
+    den = 1.0 + z2 / n
+    centre = (p + z2 / (2 * n)) / den
+    half = z * math.sqrt(p * (1 - p) / n + z2 / (4 * n * n)) / den
+    return max(0.0, centre - half), min(1.0, centre + half)
+
+
+def fit_profiles(records: list[DecisionRecord], backend: str,
+                 min_samples: int = MIN_PROFILE_SAMPLES,
+                 k: int = 5, target_risk: float = 0.1,
+                 dataset_digest: str = "") -> dict:
+    """Fit one calibration profile per (task, decision_type) slice.
+
+    Every slice gets the same out-of-fold honesty the global fit gets:
+    T is fit on train folds and ECE/coverage/risk are measured only on
+    held-out records. Slices below ``min_samples`` are reported as
+    "advisory" with no temperature — the deployable fallback is the global
+    calibrator, never a thin fit.
+    """
+    from .metrics import brier_toplabel
+
+    usable = _records_with_dist(records)
+    groups: dict[str, list[DecisionRecord]] = {}
+    for r in usable:
+        key = f"{r.task}:{r.decision_type or 'unknown'}"
+        groups.setdefault(key, []).append(r)
+
+    profiles: dict[str, dict] = {}
+    for key, group in sorted(groups.items()):
+        n = len(group)
+        if n < min_samples:
+            profiles[key] = {
+                "status": "advisory",
+                "n": n,
+                "reason": f"below_min_samples ({n} < {min_samples})",
+                "temperature": None,
+                "validation": "insufficient-data",
+            }
+            continue
+
+        calibrated, mean_T = cross_val_calibrate(group, k=k)
+        thr, cov, risk = fit_abstention_threshold(calibrated, target_risk)
+        answered = round(cov * n)
+        risk_lo, risk_hi = wilson_ci(risk, answered)
+        profiles[key] = {
+            "status": "validated",
+            "n": n,
+            "temperature": mean_T,
+            "abstain_threshold": thr,
+            "ece_before": _ece(group),
+            "ece_after": _ece(calibrated),
+            "brier_after": brier_toplabel(calibrated),
+            "coverage_at_target": cov,
+            "risk_at_target": risk,
+            "answered": answered,
+            "risk_ci95": [round(risk_lo, 4), round(risk_hi, 4)],
+            "validation": f"{k}-fold-cv out-of-fold",
+        }
+
+    return {
+        "backend": backend,
+        "min_samples": min_samples,
+        "target_risk": target_risk,
+        "dataset_digest": dataset_digest,
+        "validation": f"{k}-fold-cv out-of-fold",
+        "profiles": profiles,
+    }
+
+
+def select_profile(profiles_doc: dict | None, task: str | None,
+                   decision_type: str) -> dict | None:
+    """Return the validated profile for (task, decision_type), else None.
+
+    None means "use the global calibrator" — the fallback is always the
+    validated global fit, never an advisory slice.
+    """
+    if not profiles_doc or not task:
+        return None
+    entry = (profiles_doc.get("profiles") or {}).get(f"{task}:{decision_type}")
+    if not entry or entry.get("status") != "validated":
+        return None
+    return entry

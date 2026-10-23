@@ -160,17 +160,37 @@ def load_temperature(calibrator_path: str | None) -> float:
     return load_calibration(calibrator_path)["temperature"]
 
 
+def load_profiles(profiles_path: str | None) -> dict:
+    """Load per-slice calibration profiles (calibration.fit_profiles output).
+
+    {} when absent or malformed — profile selection then always falls back
+    to the global calibrator. The doc's ``backend`` tag is checked by the
+    caller, same contract as the global temperature.
+    """
+    if not profiles_path or not os.path.exists(profiles_path):
+        return {}
+    try:
+        with open(profiles_path, encoding="utf-8") as f:
+            doc = json.load(f)
+        if not isinstance(doc, dict) or not isinstance(doc.get("profiles"), dict):
+            return {}
+        return doc
+    except (ValueError, OSError, TypeError):
+        return {}
+
+
 # --------------------------------------------------------------------------- #
 # Plain decision functions (unit-testable, take a Client)
 # --------------------------------------------------------------------------- #
 
 def do_classify(client: Client, text: str, options: list[str],
-                hypothesis_template: str | None = None) -> dict:
+                hypothesis_template: str | None = None,
+                task: str | None = None) -> dict:
     tmpl = hypothesis_template or client.hypothesis_template
     prev = client.hypothesis_template
     client.hypothesis_template = tmpl
     try:
-        ans = client.ask(text, {"q": Choice(options)})["q"]
+        ans = client.ask(text, {"q": Choice(options)}, task=task)["q"]
     finally:
         client.hypothesis_template = prev
     return {
@@ -181,8 +201,9 @@ def do_classify(client: Client, text: str, options: list[str],
     }
 
 
-def do_rate(client: Client, text: str, levels: list[str]) -> dict:
-    ans = client.ask(text, {"q": Score(levels=levels)})["q"]
+def do_rate(client: Client, text: str, levels: list[str],
+            task: str | None = None) -> dict:
+    ans = client.ask(text, {"q": Score(levels=levels)}, task=task)["q"]
     return {
         "value": ABSTAIN if ans.abstained else ans.value,
         "score": round(ans.score, 4),
@@ -192,8 +213,9 @@ def do_rate(client: Client, text: str, levels: list[str]) -> dict:
     }
 
 
-def do_judge(client: Client, text: str, statement: str) -> dict:
-    ans = client.ask(text, {"q": Noul(statement)})["q"]
+def do_judge(client: Client, text: str, statement: str,
+             task: str | None = None) -> dict:
+    ans = client.ask(text, {"q": Noul(statement)}, task=task)["q"]
     return {
         "value": ABSTAIN if ans.abstained else bool(ans.value),
         "prob_true": round(ans.prob, 4),
@@ -206,7 +228,9 @@ def do_gate(client: Client, action: str, checks: dict | None = None) -> dict:
     """Return a blocking verdict for a detected risk or an uncertain risk check."""
     checks = checks or DEFAULT_GATE_CHECKS
     questions = {name: Noul(stmt) for name, stmt in checks.items()}
-    answers = client.ask(action, questions)
+    # The gate's checks are action-risk nouls by construction — the evalset
+    # slice name is declared so a validated action_risk:noul profile applies.
+    answers = client.ask(action, questions, task="action_risk")
     triggered = {
         name: (ABSTAIN if answer.abstained else round(answer.prob, 4))
         for name, answer in answers.items()
@@ -230,11 +254,12 @@ def do_gate(client: Client, action: str, checks: dict | None = None) -> dict:
     }
 
 
-def do_decide(client: Client, text: str, questions: dict) -> dict:
+def do_decide(client: Client, text: str, questions: dict,
+              task: str | None = None) -> dict:
     """Answer typed questions and preserve distributions for audit and evaluation."""
     from .evaluate import _build_primitive
     prims = {name: _build_primitive(spec) for name, spec in questions.items()}
-    answers = client.ask(text, prims)
+    answers = client.ask(text, prims, task=task)
     out = {}
     for name, ans in answers.items():
         entry = {
@@ -303,7 +328,8 @@ def _select_backend():
         "(expected 'acp', 'vscode-lm' or 'nli')")
 
 
-def build_client(calibrator_path: str | None = "calibration.json", backend=None) -> Client:
+def build_client(calibrator_path: str | None = "calibration.json", backend=None,
+                 profiles_path: str | None = "calibration_profiles.json") -> Client:
     calibration = load_calibration(calibrator_path)
     selected_backend = backend if backend is not None else _select_backend()
     source = "local_nli" if selected_backend is None else getattr(
@@ -318,11 +344,22 @@ def build_client(calibrator_path: str | None = "calibration.json", backend=None)
     else:
         temperature = calibration["temperature"]
         abstain_threshold = calibration["abstain_threshold"]
+    # Per-slice profiles carry the same backend tag: a fit for one confidence
+    # source must not leak into another backend's decisions.
+    profiles_doc = load_profiles(profiles_path)
+    profile_backend = profiles_doc.get("backend")
+    if profiles_doc and profile_backend and profile_backend != source:
+        print(
+            f"Profiles backend {profile_backend} does not match {source}; using global calibration only.",
+            file=sys.stderr,
+        )
+        profiles_doc = {}
     return Client(
         backend=selected_backend,
         temperature=temperature,
         abstain_threshold=abstain_threshold,
         calibrated_source=source if calibration["backend"] else None,
+        profiles=profiles_doc or None,
     )
 
 
@@ -352,14 +389,15 @@ def build_server(calibrator_path: str | None = "calibration.json"):
 
     # `record=True`: a decisao sai para o chamador — loga e injeta few-shot.
     # `record=False`: sub-pergunta interna (ex.: checks do gate) — nao loga.
-    def _judge(statement: str, context: str = "", record: bool = True) -> dict:
+    def _judge(statement: str, context: str = "", record: bool = True,
+               task: str | None = None) -> dict:
         premise, hypothesis, uncalibrated = _judge_inputs(statement, context)
         # Few-shot examples encode premise-weighed judging; they do not
         # transfer to the self-assessment question shape.
         if record and not uncalibrated:
             premise = djaevin_log.few_shot_block("judge", statement) + premise
         try:
-            ans = do_judge(client, premise, hypothesis)
+            ans = do_judge(client, premise, hypothesis, task=task)
         except Exception as error:  # noqa: BLE001 - tool boundary must not raise
             return _err(error)
         # Self-assessment answers use a different question shape — they log
@@ -403,12 +441,13 @@ def build_server(calibrator_path: str | None = "calibration.json"):
         return out
 
     def _classify(text: str, options: list[str], context: str = "",
-                  record: bool = True) -> dict:
+                  record: bool = True, task: str | None = None) -> dict:
         body = f"{context}\n{text}" if context else text
         if record:
             body = djaevin_log.few_shot_block("classify", text) + body
         try:
-            ans = do_classify(client, body, [str(o) for o in options])
+            ans = do_classify(client, body, [str(o) for o in options],
+                              task=task)
         except Exception as error:  # noqa: BLE001 - tool boundary must not raise
             return _err(error)
         low_conf = _low_conf("classify", ans["confidence"])
@@ -428,7 +467,7 @@ def build_server(calibrator_path: str | None = "calibration.json"):
         return out
 
     def _rate(text: str, scale, criteria: str = "",
-              record: bool = True) -> dict:
+              record: bool = True, task: str | None = None) -> dict:
         levels = _levels(scale)
         if isinstance(levels, dict):  # invalid scale -> structured error
             return levels
@@ -436,7 +475,7 @@ def build_server(calibrator_path: str | None = "calibration.json"):
         if record:
             body = djaevin_log.few_shot_block("rate", text) + body
         try:
-            ans = do_rate(client, body, levels)
+            ans = do_rate(client, body, levels, task=task)
         except Exception as error:  # noqa: BLE001 - tool boundary must not raise
             return _err(error)
         low_conf = _low_conf("rate", ans["confidence"])
@@ -508,11 +547,13 @@ def build_server(calibrator_path: str | None = "calibration.json"):
          low_confidence, advisory: true, details}.
         Pure opinion — nothing is blocked, approved or enforced."""
         hint = f" (concern: {kind})" if kind else ""
+        # Gate questions are action-risk shaped; the declared slice lets a
+        # validated profile apply while everything else keeps the global fit.
         risk = _classify(
             djaevin_log.few_shot_block("gate", action)
             + f"Action: {action}{hint}\nDoes it move money or delete/destroy "
             f"data? Rate the risk level.",
-            GATE_RISK_LEVELS, record=False)
+            GATE_RISK_LEVELS, record=False, task="action_risk")
         if "error" in risk:
             return risk
         # Hibrido: os dois checks nomeados do contrato antigo ficam como
@@ -520,7 +561,7 @@ def build_server(calibrator_path: str | None = "calibration.json"):
         # Sub-perguntas internas: record=False (nao sao decisoes do chamador).
         details = {}
         for name, stmt in DEFAULT_GATE_CHECKS.items():
-            check = _judge(stmt, action, record=False)
+            check = _judge(stmt, action, record=False, task="action_risk")
             # `action` is the premise; if it were empty the check runs
             # uncalibrated and p_yes is absent — .get() yields null, never
             # a fabricated number.

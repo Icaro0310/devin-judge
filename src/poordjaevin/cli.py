@@ -97,6 +97,7 @@ def cmd_calibrate(args) -> int:
 
     summ = summarize_calibration(raw, k=args.folds, target_risk=args.target_risk)
     global_T = fit_global_temperature(raw)  # the deployable scalar
+    backend_tag = getattr(client.backend, "confidence_source", "local_nli")
 
     print("== calibration (5-fold held-out) ==")
     print(f"  temperature (mean)   : {summ['temperature']:.3f}")
@@ -115,11 +116,38 @@ def cmd_calibrate(args) -> int:
         # samples — load_calibration defaults a missing tag to local_nli
         # and build_client would then discard this temperature for ACP or
         # vscode-lm deployments.
-        "backend": getattr(client.backend, "confidence_source", "local_nli"),
+        "backend": backend_tag,
     }
     with open(args.out, "w") as f:
         json.dump(saved, f, indent=2)
     print(f"\nsaved calibrator -> {args.out}")
+
+    if args.profiles_out:
+        import hashlib
+
+        from .calibration import fit_profiles
+        with open(args.set, "rb") as f:
+            digest = "sha256:" + hashlib.sha256(f.read()).hexdigest()[:16]
+        doc = fit_profiles(raw, backend=backend_tag,
+                           min_samples=args.min_samples,
+                           k=args.folds, target_risk=args.target_risk,
+                           dataset_digest=digest)
+        print("\n== profiles (task:decision_type) ==")
+        for key, p in doc["profiles"].items():
+            if p["status"] == "validated":
+                print(f"  {key:<28} n={p['n']:>3} validated "
+                      f"T={p['temperature']:.2f} "
+                      f"ECE {p['ece_before']:.3f}->{p['ece_after']:.3f} "
+                      f"Brier={p['brier_after']:.3f} "
+                      f"cov={p['coverage_at_target']:.2f} "
+                      f"risk={p['risk_at_target']:.3f} "
+                      f"CI95={p['risk_ci95']}")
+            else:
+                print(f"  {key:<28} n={p['n']:>3} ADVISORY "
+                      f"({p['reason']}) — global fallback")
+        with open(args.profiles_out, "w") as f:
+            json.dump(doc, f, indent=2)
+        print(f"saved profiles -> {args.profiles_out}")
 
     if args.plots:
         try:
@@ -235,6 +263,12 @@ def main(argv=None) -> int:
     pc.add_argument("--plots", action="store_true", help="write before/after diagrams")
     pc.add_argument("--plot-path", default="docs/reliability_before_after.png")
     pc.add_argument("--out", default="calibration.json")
+    pc.add_argument("--profiles-out", default="calibration_profiles.json",
+                    help="write per-(task,decision_type) profiles here; "
+                    "empty string disables")
+    pc.add_argument("--min-samples", type=int, default=30,
+                    help="minimum slice mass for a validated profile "
+                    "(below stays advisory and falls back to global)")
     pc.set_defaults(func=cmd_calibrate)
 
     ps = sub.add_parser("serve", help="run the MCP server (for Devin, Claude Code etc.)")
