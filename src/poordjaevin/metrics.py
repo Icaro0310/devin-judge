@@ -33,6 +33,7 @@ class DecisionRecord:
     question: str = ""
     dist: tuple = ()      # full distribution over classes, in class order
     gold_index: int = -1  # index of the gold class within dist
+    decision_type: str = ""  # "noul" | "choice" | "score"; "" if unknown
 
 
 def accuracy(records: list[DecisionRecord]) -> float:
