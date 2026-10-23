@@ -271,3 +271,37 @@ def test_main_missing_mcp_extra_exits_with_hint(tmp_path, monkeypatch, capsys):
     err = capsys.readouterr().err
     assert "poordjaevin[local,mcp]" in err
     assert "Traceback" not in err
+
+
+def test_judge_decision_records_few_shot_usage(tmp_path, monkeypatch):
+    """Observability: when validated examples exist and a recorded judge
+    decision injects the block, the logged row carries the example ids and
+    the pool size at decision time."""
+    import asyncio
+    import json
+    import sqlite3
+
+    from poordjaevin import djaevin_log, mcp_server
+
+    monkeypatch.setenv("POORDJAEVIN_LOG_DB", str(tmp_path / "djaevin_log.db"))
+    monkeypatch.setattr(
+        mcp_server, "build_client",
+        lambda *a, **k: Client(backend=ScriptedBackend([0.9, 0.1])))
+
+    did = djaevin_log.log_decision(
+        "judge", "Backups completed last night per the log.", "no", 0.8,
+        False)
+    assert djaevin_log.mark_disagreement(did, "yes")[
+        "promoted_to_examples"] is True
+
+    server = mcp_server.build_server()
+    result = asyncio.run(server.call_tool("judge", {
+        "statement": "Backups completed last night per the log.",
+        "context": "Release checklist item"}))
+    out = json.loads(result.content[0].text)
+    row = sqlite3.connect(tmp_path / "djaevin_log.db").execute(
+        "SELECT few_shot_ids, few_shot_pool FROM djaevin_decisions "
+        "WHERE id = ?", (out["decision_id"],)).fetchone()
+    ids = json.loads(row[0])
+    assert len(ids) == 1
+    assert row[1] == 1
