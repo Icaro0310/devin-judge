@@ -248,8 +248,71 @@ def test_learning_cycle_example_schema_carries_no_extra_fields(db):
     row = con.execute("SELECT * FROM djaevin_examples").fetchone()
     con.close()
     assert cols == ["id", "tool", "input_text", "correct_choice",
-                    "added_ts"]
-    assert len(row) == 5
+                    "added_ts", "source_decision_id"]
+    assert len(row) == 6
+
+
+def test_promotion_records_source_decision_id(db):
+    did = djaevin_log.log_decision(
+        "judge", "Backups completed last night per the log.", "no", 0.8,
+        False)
+    djaevin_log.mark_disagreement(did, "yes")
+    examples = djaevin_log.get_few_shot("judge", "Backups completed")
+    assert len(examples) == 1
+    assert examples[0]["source_decision_id"] == did
+    # provenance join resolves to the original wrong decision
+    src = djaevin_log.get_decision(examples[0]["source_decision_id"])
+    assert src is not None
+    assert src["id"] == did
+    assert src["choice"] == "no"
+    assert src["disagreed"] is True
+    assert src["tool"] == "judge"
+
+
+def test_get_decision_returns_none_for_missing_id(db):
+    assert djaevin_log.get_decision(99999) is None
+
+
+def test_mark_disagreement_on_missing_decision_creates_no_example(db):
+    out = djaevin_log.mark_disagreement(424242, "yes")
+    assert out["ok"] is False
+    import sqlite3
+    con = sqlite3.connect(djaevin_log._db_path())
+    assert con.execute(
+        "SELECT COUNT(*) FROM djaevin_examples").fetchone()[0] == 0
+    con.close()
+
+
+def test_legacy_example_without_source_keeps_null_provenance(db):
+    """Pre-migration rows (or manually seeded examples) carry no
+    source_decision_id — NULL, never a fabricated reference."""
+    import sqlite3
+    djaevin_log.get_few_shot("judge", "x")  # force schema creation
+    con = sqlite3.connect(djaevin_log._db_path())
+    con.execute(
+        "INSERT INTO djaevin_examples "
+        "(tool, input_text, correct_choice, added_ts) "
+        "VALUES ('judge', 'Legacy seeded example.', 'yes', '2020-01-01')")
+    con.commit()
+    con.close()
+    examples = djaevin_log.get_few_shot("judge", "Legacy seeded example.")
+    assert examples[0]["source_decision_id"] is None
+
+
+def test_remark_keeps_single_example_with_original_source(db):
+    did = djaevin_log.log_decision(
+        "judge", "Backups completed last night per the log.", "no", 0.8,
+        False)
+    assert djaevin_log.mark_disagreement(did, "yes")[
+        "promoted_to_examples"] is True
+    out = djaevin_log.mark_disagreement(did, "yes")
+    assert out["rejection_reason"] == "near_duplicate"
+    import sqlite3
+    con = sqlite3.connect(djaevin_log._db_path())
+    rows = con.execute(
+        "SELECT source_decision_id FROM djaevin_examples").fetchall()
+    con.close()
+    assert rows == [(did,)]
 
 
 def _promote(tool: str, input_text: str, wrong: str, right: str) -> int:
