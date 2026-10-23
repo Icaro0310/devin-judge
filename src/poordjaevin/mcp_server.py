@@ -329,7 +329,8 @@ def _select_backend():
 
 
 def build_client(calibrator_path: str | None = "calibration.json", backend=None,
-                 profiles_path: str | None = "calibration_profiles.json") -> Client:
+                 profiles_path: str | None = "calibration_profiles.json",
+                 policy=None, hooks: dict | None = None) -> Client:
     calibration = load_calibration(calibrator_path)
     selected_backend = backend if backend is not None else _select_backend()
     source = "local_nli" if selected_backend is None else getattr(
@@ -360,6 +361,8 @@ def build_client(calibrator_path: str | None = "calibration.json", backend=None,
         abstain_threshold=abstain_threshold,
         calibrated_source=source if calibration["backend"] else None,
         profiles=profiles_doc or None,
+        policy=policy,
+        hooks=hooks,
     )
 
 
@@ -596,7 +599,15 @@ def build_server(calibrator_path: str | None = "calibration.json"):
         `correct_choice`, the pair input->correct is promoted to validated
         few-shot examples. Only mark when the right answer is obvious —
         disagreement on ambiguous questions has no value."""
-        return djaevin_log.mark_disagreement(decision_id, correct_choice)
+        result = djaevin_log.mark_disagreement(decision_id, correct_choice)
+        # on_disagreement: observers get the outcome (promoted or the
+        # rejection reason), never the payload.
+        client.notify_disagreement({
+            "decision_id": decision_id,
+            "promoted": result.get("promoted_to_examples", False),
+            "rejection_reason": result.get("rejection_reason"),
+        })
+        return result
 
     @server.tool()
     def djaevin_calibrate() -> dict:
