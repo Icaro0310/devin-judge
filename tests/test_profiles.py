@@ -7,7 +7,6 @@ applies a validated profile per question type and falls back otherwise.
 No model needed — records and backend are synthetic.
 """
 
-import math
 
 import pytest
 
@@ -226,6 +225,7 @@ def test_profile_temperature_respects_calibrated_source_guard():
 
 def test_build_client_drops_profiles_on_backend_mismatch(tmp_path, monkeypatch):
     import json
+
     from poordjaevin import mcp_server
 
     cal = tmp_path / "calibration.json"

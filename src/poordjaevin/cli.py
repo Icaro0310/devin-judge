@@ -124,6 +124,7 @@ def cmd_calibrate(args) -> int:
 
     if args.profiles_out:
         import hashlib
+
         from .calibration import fit_profiles
         with open(args.set, "rb") as f:
             digest = "sha256:" + hashlib.sha256(f.read()).hexdigest()[:16]
