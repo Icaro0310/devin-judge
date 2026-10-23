@@ -1,0 +1,84 @@
+{
+  "backend": "local_nli",
+  "min_samples": 30,
+  "target_risk": 0.1,
+  "dataset_digest": "sha256:ae6a1866ce80108b",
+  "validation": "5-fold-cv out-of-fold",
+  "profiles": {
+    "action_risk:noul": {
+      "status": "validated",
+      "n": 60,
+      "temperature": 2.9799999999999995,
+      "abstain_threshold": 0.575966814133563,
+      "ece_before": 0.1008790512879689,
+      "ece_after": 0.03926769381592122,
+      "brier_after": 0.09075012514535194,
+      "coverage_at_target": 1.0,
+      "risk_at_target": 0.1,
+      "answered": 60,
+      "risk_ci95": [
+        0.0466,
+        0.2015
+      ],
+      "validation": "5-fold-cv out-of-fold"
+    },
+    "intent:choice": {
+      "status": "advisory",
+      "n": 19,
+      "reason": "below_min_samples (19 < 30)",
+      "temperature": null,
+      "validation": "insufficient-data"
+    },
+    "support_triage:choice": {
+      "status": "validated",
+      "n": 31,
+      "temperature": 1.6800000000000002,
+      "abstain_threshold": 0.9590680705475002,
+      "ece_before": 0.18265512814250393,
+      "ece_after": 0.1537164327528752,
+      "brier_after": 0.22979598581714064,
+      "coverage_at_target": 0.03225806451612903,
+      "risk_at_target": 0.0,
+      "answered": 1,
+      "risk_ci95": [
+        0.0,
+        0.7935
+      ],
+      "validation": "5-fold-cv out-of-fold"
+    },
+    "support_triage:noul": {
+      "status": "validated",
+      "n": 62,
+      "temperature": 2.94,
+      "abstain_threshold": 0.517353472749469,
+      "ece_before": 0.10371232417321972,
+      "ece_after": 0.031258340135356305,
+      "brier_after": 0.07952420925202133,
+      "coverage_at_target": 1.0,
+      "risk_at_target": 0.0967741935483871,
+      "answered": 62,
+      "risk_ci95": [
+        0.0451,
+        0.1955
+      ],
+      "validation": "5-fold-cv out-of-fold"
+    },
+    "support_triage:score": {
+      "status": "validated",
+      "n": 31,
+      "temperature": 5.68,
+      "abstain_threshold": 1.01,
+      "ece_before": 0.42354736060793846,
+      "ece_after": 0.10650245843444855,
+      "brier_after": 0.2635348270938388,
+      "coverage_at_target": 0.0,
+      "risk_at_target": 0.0,
+      "answered": 0,
+      "risk_ci95": [
+        0.0,
+        1.0
+      ],
+      "validation": "5-fold-cv out-of-fold"
+    }
+  }
+}

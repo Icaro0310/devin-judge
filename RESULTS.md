@@ -65,12 +65,41 @@ abstains on the rest (the honest "I don't know, escalate" signal). Full curve:
 
 ![risk coverage](docs/risk_coverage.png)
 
+### Per-slice calibration profiles
+
+One global temperature hides slice-level weakness. `--profiles-out` fits one
+profile per (task, decision type) on the same 5-fold held-out scheme. Slices
+below 30 labelled decisions stay advisory and fall back to the global
+calibrator; no profile is graded on the data it was fit on.
+
+```bash
+poordjaevin calibrate --set evalset/tasks.jsonl \
+    --out calibration.json --profiles-out calibration_profiles.json --plots
+```
+
+Dataset digest: `sha256:ae6a1866ce80108b` (203 decisions in
+`evalset/tasks.jsonl`).
+
+| Profile | n | Status | T | ECE before -> after | Coverage @ risk <= 0.10 | Observed risk [CI95] |
+|---|---:|---|---:|---|---:|---|
+| action_risk:noul | 60 | validated | 2.98 | 0.101 -> 0.039 | 1.00 | 0.100 [0.047, 0.202] |
+| intent:choice | 19 | advisory (n < 30) | global fallback | - | - | - |
+| support_triage:choice | 31 | validated | 1.68 | 0.183 -> 0.154 | 0.03 | 0.000 [0, 0.794] |
+| support_triage:noul | 62 | validated | 2.94 | 0.104 -> 0.031 | 1.00 | 0.097 [0.045, 0.196] |
+| support_triage:score | 31 | validated | 5.68 | 0.424 -> 0.107 | 0.00 | 0.000 [0, 1.0] |
+
+The pooled `support_triage` coverage of ~0.5 was misleading: `noul` decisions
+there are strong (full coverage at target risk) while `choice` and `score`
+abstain on almost everything. A validated profile that still abstains on
+nearly all inputs is honest but not yet useful; those slices need either
+more distinctive hypotheses or a different backend before gating on them.
+
 ### Honest notes
 
 - The after-ECE is 0.072, not below 0.05. That is the real cross-validated
   number on a small set; we report it as measured rather than tuning to a
-  target. A per-task or per-question temperature (instead of one global scalar)
-  would likely push it lower, and is a natural next step.
+  target. Per-slice profiles (above) now replace the single global scalar
+  where they are validated.
 - Same eval set caveats as above: small, single-labeller, support flavoured.
 
 ## How this compares to Jev, Laya, and von
