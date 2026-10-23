@@ -32,6 +32,9 @@ class LocalNLIBackend:
     """
 
     confidence_source = "local_nli"
+    # Runs in-process: payload never leaves the machine, cost is local compute.
+    is_remote = False
+    estimated_cost = 0.0
 
     def __init__(self, model_name: str = DEFAULT_MODEL, device: str | None = None,
                  batch_size: int = 16, max_length: int = 512):

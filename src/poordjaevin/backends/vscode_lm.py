@@ -83,6 +83,10 @@ class VscodeLmBackend:
     """entail_probs via the judge VS Code extension's localhost endpoint."""
 
     confidence_source = "self_report"
+    # The endpoint is localhost but the provider behind it is hosted:
+    # treat as remote for privacy. Cost unknown, the backend cannot prove it.
+    is_remote = True
+    estimated_cost = None
 
     def __init__(self, endpoint: str | None = None, timeout: float | None = None,
                  fallback=None):

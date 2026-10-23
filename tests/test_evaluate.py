@@ -15,6 +15,9 @@ class ScriptedBackend:
     evaluate() calls ask() once per item, so the backend is called once per
     item; this consumes ``len(pairs)`` scripted scores per call across the run.
     """
+    is_remote = False  # test double: declared local for the default policy
+    estimated_cost = 0.0
+
     def __init__(self, scores):
         self.scores = list(scores)
         self.i = 0

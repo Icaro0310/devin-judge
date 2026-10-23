@@ -14,9 +14,16 @@ from __future__ import annotations
 
 from typing import Protocol
 
+from .policy import Policy, PolicyError
 from .primitives import Choice, Noul, Score
 
 DEFAULT_TEMPLATE = "This example is {}."
+
+# The six lifecycle hook points. Every hook takes a single ctx dict and is
+# a no-op by default. Only before_judge may return a payload override
+# (the redaction seam); the rest observe metadata, never the raw state.
+HOOK_POINTS = ("before_judge", "before_backend", "after_backend",
+               "after_calibration", "on_disagreement", "on_error")
 
 
 class Backend(Protocol):
@@ -29,7 +36,9 @@ class Client:
                  temperature: float = 1.0,
                  abstain_threshold: float = 0.0,
                  calibrated_source: str | None = None,
-                 profiles: dict | None = None):
+                 profiles: dict | None = None,
+                 policy: Policy | None = None,
+                 hooks: dict | None = None):
         self._backend = backend
         self.hypothesis_template = hypothesis_template
         # A fitted temperature (from `poordjaevin calibrate`) makes ask()'s
@@ -45,6 +54,15 @@ class Client:
         # (see calibration.fit_profiles). Only "validated" entries apply;
         # anything else falls back to the global temperature above.
         self._profiles = (profiles or {}).get("profiles") or {}
+        # Policy checks run before the backend is invoked (privacy,
+        # permissions, availability, budget). None = permissive default.
+        # An omitted policy means the default closed one, never "no check":
+        # remote or undeclared-destination backends need explicit
+        # authorization, and skipping the check cannot grant it.
+        self._policy = policy if policy is not None else Policy()
+        # Lifecycle hooks, HOOK_POINTS keys -> callables. Inert by default.
+        self._hooks = {k: v for k, v in (hooks or {}).items()
+                       if k in HOOK_POINTS and callable(v)}
 
     @property
     def backend(self) -> Backend:
@@ -60,6 +78,42 @@ class Client:
             return "choice"
         return "score"
 
+    def _fire(self, point: str, ctx: dict):
+        """Invoke a hook if configured; returns its return value (used only
+        by before_judge). Hook exceptions propagate, a hook that fails
+        loudly is safer than one that silently drops a check."""
+        hook = self._hooks.get(point)
+        return hook(ctx) if hook else None
+
+    def _on_error(self, stage: str, exc: Exception) -> None:
+        # Hooks get a structured event only: no raw message, ever. Error
+        # text can embed state fragments, and truncation is not redaction.
+        if isinstance(exc, PolicyError):
+            code = "POLICY_DENIED"
+        elif isinstance(exc, (ValueError, TypeError)):
+            code = "VALIDATION_ERROR"
+        elif stage == "backend":
+            code = "BACKEND_FAILURE"
+        else:
+            code = "INTERNAL"
+        ctx = {
+            "event": "on_error",
+            "stage": stage,
+            "backend": type(self._backend).__name__ if self._backend else None,
+            "error_code": code,
+            "error_type": type(exc).__name__,
+            "retryable": isinstance(exc, (TimeoutError, ConnectionError)),
+        }
+        if isinstance(exc, PolicyError):
+            ctx["policy_rule"] = exc.rule
+        self._fire("on_error", ctx)
+
+    def notify_disagreement(self, ctx: dict) -> None:
+        """Fire on_disagreement hooks. Consumers (the log, the MCP server)
+        call this after recording a disagreement so observers can create
+        adjudication candidates without the client owning the store."""
+        self._fire("on_disagreement", ctx)
+
     def ask(self, state: str, questions: dict, task: str | None = None):
         """Answer every question about ``state`` in one batched pass.
 
@@ -73,6 +127,31 @@ class Client:
             raise ValueError("state must be a non-empty string")
         if not questions:
             raise ValueError("ask() needs at least one question")
+
+        # Hook 1: request validation / redaction. It is the only hook that
+        # sees the payload, and the only one that may rewrite it (return
+        # {"state": ..., "questions": ...} to redact what the backend sees).
+        try:
+            override = self._fire("before_judge", {
+                "state": state, "questions": questions, "task": task})
+        except Exception as exc:
+            self._on_error("before_judge", exc)
+            raise
+        if isinstance(override, dict):
+            state = override.get("state", state)
+            questions = override.get("questions", questions)
+            if not isinstance(state, str) or state == "" or not questions:
+                raise ValueError("before_judge produced an empty request")
+
+        # Policy BEFORE the backend is touched: the backend property also
+        # lazy-builds the default, so this is the availability check too.
+        try:
+            self._policy.check(
+                self.backend,
+                calibrated=self._calibrated_source is not None)
+        except Exception as exc:
+            self._on_error("policy", exc)
+            raise
 
         pairs: list[tuple[str, str]] = []
         plan: list[tuple[str, object, int, int, str]] = []  # name, prim, start, count, mode
@@ -92,11 +171,29 @@ class Client:
             pairs.extend((state, h) for h in hyps)
             plan.append((name, prim, start, len(hyps), mode))
 
-        probs = self.backend.entail_probs(pairs)  # the single pass
+        # Hook 2 / 3: metadata only — names and counts, never pair contents.
+        backend_name = type(self.backend).__name__
+        self._fire("before_backend", {"backend": backend_name,
+                                      "pairs_count": len(pairs),
+                                      "task": task})
+        import time
+        t0 = time.monotonic()
+        try:
+            probs = self.backend.entail_probs(pairs)  # the single pass
+        except Exception as exc:
+            self._on_error("backend", exc)
+            raise
+        duration = time.monotonic() - t0
         if len(probs) != len(pairs):
-            raise RuntimeError(
-                f"backend returned {len(probs)} scores for {len(pairs)} pairs"
-            )
+            err = RuntimeError(
+                f"backend returned {len(probs)} scores for {len(pairs)} pairs")
+            self._on_error("backend", err)
+            raise err
+        self._fire("after_backend", {"backend": backend_name,
+                                     "pairs_count": len(pairs),
+                                     "probs_count": len(probs),
+                                     "duration_s": round(duration, 4),
+                                     "task": task})
 
         calibrated = (
             self._calibrated_source is None
@@ -141,4 +238,14 @@ class Client:
                     kind="probs",
                     threshold=q_abstain,
                 )
+
+        # Hook 4: typed answers only — value, confidence, abstained. No
+        # distributions, no raw scores, no state.
+        self._fire("after_calibration", {
+            "task": task,
+            "answers": {n: {"value": a.value,
+                            "confidence": round(a.confidence, 4),
+                            "abstained": a.abstained}
+                        for n, a in out.items()},
+        })
         return out

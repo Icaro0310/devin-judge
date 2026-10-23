@@ -27,7 +27,8 @@ for _name in (
     if _new not in _os.environ and _old in _os.environ:
         _os.environ[_new] = _os.environ[_old]
 
-from .client import Client
+from .client import HOOK_POINTS, Client
+from .policy import Policy, PolicyError
 from .primitives import (
     Choice,
     ChoiceAnswer,
@@ -40,11 +41,14 @@ from .primitives import (
 __version__ = "0.1.3"
 
 __all__ = [
+    "HOOK_POINTS",
     "Choice",
     "ChoiceAnswer",
     "Client",
     "Noul",
     "NoulAnswer",
+    "Policy",
+    "PolicyError",
     "Score",
     "ScoreAnswer",
     "__version__",

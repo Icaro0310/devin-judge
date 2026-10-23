@@ -60,6 +60,9 @@ class OllamaLogitsBackend:
     """Scores (premise, hypothesis) pairs via Ollama first-token logprobs."""
 
     confidence_source = "logprobs"
+    # Localhost HTTP only: payload stays on this machine.
+    is_remote = False
+    estimated_cost = 0.0
 
     def __init__(
         self,

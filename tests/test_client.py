@@ -14,6 +14,9 @@ class FakeBackend:
     """Records the pairs it was asked about and returns scripted entailment
     probabilities, so we can assert exactly how the Client batches and slices."""
 
+    is_remote = False  # test double: declared local for the default policy
+    estimated_cost = 0.0
+
     def __init__(self, scores):
         self.scores = list(scores)
         self.calls = 0
@@ -106,6 +109,8 @@ def test_bad_question_type_rejected():
 
 def test_backend_wrong_score_count_raises():
     class BadBackend:
+        is_remote = False
+
         def entail_probs(self, pairs):
             return [0.5]  # wrong length on purpose
     with pytest.raises(RuntimeError):

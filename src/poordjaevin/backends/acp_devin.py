@@ -65,6 +65,10 @@ class AcpDevinBackend:
     """entail_probs via a persistent Devin ACP session (one turn per batch)."""
 
     confidence_source = "self_report"
+    # Devin ACP service: payload leaves the machine. Cost depends on the
+    # pinned model; unknown until a probe verifies it (free or paid).
+    is_remote = True
+    estimated_cost = None
 
     def __init__(self, bridge: str | None = None, node: str | None = None,
                  cwd: str | None = None, timeout: float | None = None):

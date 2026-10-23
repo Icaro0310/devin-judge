@@ -132,6 +132,9 @@ def test_wilson_ci_bounds():
 # --------------------------------------------------------------------- #
 
 class FakeBackend:
+    is_remote = False  # test double: declared local for the default policy
+    estimated_cost = 0.0
+
     def __init__(self, scores):
         self.scores = list(scores)
 
