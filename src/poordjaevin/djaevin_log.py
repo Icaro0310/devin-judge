@@ -54,6 +54,9 @@ _MIGRATIONS = [
     # anteriores a esta migracao).
     "ALTER TABLE djaevin_decisions ADD COLUMN few_shot_ids TEXT",
     "ALTER TABLE djaevin_decisions ADD COLUMN few_shot_pool INTEGER",
+    # Proveniencia de primeiro grau: qual decisao originou o exemplo.
+    # NULL em exemplos anteriores a esta migracao ou sem match inequivoco.
+    "ALTER TABLE djaevin_examples ADD COLUMN source_decision_id INTEGER",
 ]
 
 # Gate de promocao (write-time): um candidato so entra em djaevin_examples
@@ -172,10 +175,11 @@ def mark_disagreement(decision_id: int, correct_choice: str = "") -> dict:
                     if rejection is None:
                         con.execute(
                             "INSERT INTO djaevin_examples "
-                            "(tool, input_text, correct_choice, added_ts) "
-                            "VALUES (?, ?, ?, ?)",
+                            "(tool, input_text, correct_choice, added_ts, "
+                            " source_decision_id) VALUES (?, ?, ?, ?, ?)",
                             (row[0], row[1], str(correct_choice),
-                             datetime.now(timezone.utc).isoformat()))
+                             datetime.now(timezone.utc).isoformat(),
+                             decision_id))
                         promoted = True
             else:
                 rejection = "no_ground_truth"
@@ -201,13 +205,36 @@ def get_few_shot(tool: str, input_text: str, n: int = 3) -> list[dict]:
     try:
         with _connect() as con:
             rows = con.execute(
-                "SELECT id, input_text, correct_choice FROM djaevin_examples "
-                "WHERE tool = ?", (tool,)).fetchall()
+                "SELECT id, input_text, correct_choice, source_decision_id "
+                "FROM djaevin_examples WHERE tool = ?", (tool,)).fetchall()
     except (OSError, sqlite3.Error):
         return []
     scored = sorted(rows, key=lambda r: jaccard(input_text, r[1]),
                     reverse=True)
-    return [{"id": r[0], "input": r[1], "choice": r[2]} for r in scored[:n]]
+    return [{"id": r[0], "input": r[1], "choice": r[2],
+             "source_decision_id": r[3]} for r in scored[:n]]
+
+
+def get_decision(decision_id: int) -> dict | None:
+    """Fetch one logged decision row by id, or None when missing/unreadable.
+
+    Provenance join partner for `source_decision_id`: the returned dict has
+    the logged `choice` (which a promoted example's `correct_choice`
+    corrected) and the `disagreed` flag."""
+    try:
+        with _connect() as con:
+            row = con.execute(
+                "SELECT id, ts, tool, input_text, choice, confidence, "
+                "low_conf, disagreed FROM djaevin_decisions WHERE id = ?",
+                (decision_id,)).fetchone()
+    except (OSError, sqlite3.Error):
+        return None
+    if row is None:
+        return None
+    return {"id": row[0], "ts": row[1], "tool": row[2],
+            "input_text": row[3], "choice": row[4],
+            "confidence": row[5], "low_conf": bool(row[6]),
+            "disagreed": bool(row[7])}
 
 
 def few_shot_pool_size(tool: str) -> int:
