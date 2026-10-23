@@ -51,6 +51,34 @@ _MIGRATIONS = [
     "ALTER TABLE djaevin_decisions ADD COLUMN cost REAL",
 ]
 
+# Gate de promocao (write-time): um candidato so entra em djaevin_examples
+# depois de passar estes criterios — a store nunca aceita exemplo nao
+# validado, qualquer que seja o caller. Constantes espelham o curador de
+# segunda passagem (PAS scripts/djaevin_curate.py); o sweeper retroativo
+# continua a limpar linhas legadas anteriores ao gate.
+_MIN_INPUT_CHARS = 10
+_DUP_JACCARD = 0.9
+_TOOL_DOMAINS = {
+    "judge": {"yes", "no"},
+    "gate": {"low", "medium", "high"},
+}
+
+
+def _promotion_rejection(tool: str, input_text: str, correct_choice: str,
+                         con: sqlite3.Connection) -> str | None:
+    """Reason a candidate is not promotable, or None when it is eligible."""
+    if len(input_text.strip()) < _MIN_INPUT_CHARS:
+        return "trivial"
+    domain = _TOOL_DOMAINS.get(tool)
+    if domain is not None and correct_choice not in domain:
+        return "out_of_domain"
+    for (existing,) in con.execute(
+            "SELECT input_text FROM djaevin_examples WHERE tool = ?",
+            (tool,)).fetchall():
+        if jaccard(input_text, existing) >= _DUP_JACCARD:
+            return "near_duplicate"
+    return None
+
 
 def _db_path(platform: str | None = None, env=None, home=None) -> str:
     env = os.environ if env is None else env
@@ -120,19 +148,26 @@ def mark_disagreement(decision_id: int, correct_choice: str = "") -> dict:
             if cur.rowcount == 0:
                 return {"ok": False, "error": f"decision_id {decision_id} not found"}
             promoted = False
+            rejection = None
             if correct_choice:
                 row = con.execute(
                     "SELECT tool, input_text FROM djaevin_decisions WHERE id = ?",
                     (decision_id,)).fetchone()
                 if row:
-                    con.execute(
-                        "INSERT INTO djaevin_examples "
-                        "(tool, input_text, correct_choice, added_ts) "
-                        "VALUES (?, ?, ?, ?)",
-                        (row[0], row[1], str(correct_choice),
-                         datetime.now(timezone.utc).isoformat()))
-                    promoted = True
-        return {"ok": True, "promoted_to_examples": promoted}
+                    rejection = _promotion_rejection(
+                        row[0], row[1], str(correct_choice), con)
+                    if rejection is None:
+                        con.execute(
+                            "INSERT INTO djaevin_examples "
+                            "(tool, input_text, correct_choice, added_ts) "
+                            "VALUES (?, ?, ?, ?)",
+                            (row[0], row[1], str(correct_choice),
+                             datetime.now(timezone.utc).isoformat()))
+                        promoted = True
+            else:
+                rejection = "no_ground_truth"
+        return {"ok": True, "promoted_to_examples": promoted,
+                "rejection_reason": rejection}
     except (OSError, sqlite3.Error) as error:
         return {"ok": False, "error": f"{type(error).__name__}: {error}"}
 
