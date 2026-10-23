@@ -250,3 +250,87 @@ def test_learning_cycle_example_schema_carries_no_extra_fields(db):
     assert cols == ["id", "tool", "input_text", "correct_choice",
                     "added_ts"]
     assert len(row) == 5
+
+
+def _promote(tool: str, input_text: str, wrong: str, right: str) -> int:
+    did = djaevin_log.log_decision(tool, input_text, wrong, 0.9, False)
+    assert djaevin_log.mark_disagreement(did, right)[
+        "promoted_to_examples"] is True
+    return did
+
+
+def test_few_shot_block_ids_reports_injected_examples(db):
+    _promote("judge", "Backups completed last night per the log.", "no", "yes")
+    _promote("judge", "The deploy tag matches the release notes.", "no", "yes")
+    block, ids = djaevin_log.few_shot_block_ids(
+        "judge", "Backups completed last night per the log.")
+    assert "Exemplos validados" in block
+    assert len(ids) >= 1
+    # ids correspond to real example rows, in the same order as the block
+    import sqlite3
+    con = sqlite3.connect(djaevin_log._db_path())
+    for eid in ids:
+        row = con.execute(
+            "SELECT tool FROM djaevin_examples WHERE id = ?",
+            (eid,)).fetchone()
+        assert row and row[0] == "judge"
+    con.close()
+    # legacy helper stays text-only and consistent
+    assert djaevin_log.few_shot_block(
+        "judge", "Backups completed last night per the log.") == block
+
+
+def test_few_shot_pool_size_counts_tool_examples(db):
+    assert djaevin_log.few_shot_pool_size("judge") == 0
+    _promote("judge", "Backups completed last night per the log.", "no", "yes")
+    _promote("judge", "The deploy tag matches the release notes.", "no", "yes")
+    assert djaevin_log.few_shot_pool_size("judge") == 2
+    assert djaevin_log.few_shot_pool_size("rate") == 0
+
+
+def test_log_decision_records_few_shot_observability(db):
+    did = djaevin_log.log_decision(
+        "judge", "The claim is supported.", "yes", 0.9, False,
+        few_shot_ids=[3, 7], few_shot_pool=4)
+    did2 = djaevin_log.log_decision("judge", "No examples.", "no", 0.8, False)
+    import json
+    import sqlite3
+    con = sqlite3.connect(djaevin_log._db_path())
+    row = con.execute(
+        "SELECT few_shot_ids, few_shot_pool FROM djaevin_decisions "
+        "WHERE id = ?", (did,)).fetchone()
+    row2 = con.execute(
+        "SELECT few_shot_ids, few_shot_pool FROM djaevin_decisions "
+        "WHERE id = ?", (did2,)).fetchone()
+    con.close()
+    assert json.loads(row[0]) == [3, 7]
+    assert row[1] == 4
+    # columns exist and default to NULL when the caller passes nothing —
+    # old rows pre-migration read the same way
+    assert row2 == (None, None)
+
+
+def test_few_shot_stats_aggregates_eligible_and_used(db):
+    # two decisions before any example existed: not eligible
+    djaevin_log.log_decision("judge", "First plain input.", "yes", 0.9, False)
+    djaevin_log.log_decision("judge", "Second plain input.", "no", 0.8, False)
+    # promote one example, then log one decision that used it and one that
+    # did not pass the ids through (record=False path)
+    _promote("judge", "Backups completed last night per the log.", "no", "yes")
+    _block, ids = djaevin_log.few_shot_block_ids("judge", "Backups completed")
+    assert ids
+    djaevin_log.log_decision(
+        "judge", "Backups completed last night per the log.", "yes", 0.9,
+        False, few_shot_ids=ids,
+        few_shot_pool=djaevin_log.few_shot_pool_size("judge"))
+    djaevin_log.log_decision(
+        "judge", "record=False internal check.", "yes", 0.5, False)
+    stats = djaevin_log.few_shot_stats()
+    j = stats["judge"]
+    assert j["decisions"] == 5  # 2 plain + the promoted one + used + internal
+    # only the decision that actually recorded a non-empty pool counts as
+    # eligible — rows without the field (record=False, pre-migration) are
+    # unknown, not eligible
+    assert j["eligible"] == 1
+    assert j["used"] == 1
+    assert j["avg_examples_per_used"] == float(len(ids))

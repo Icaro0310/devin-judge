@@ -394,9 +394,11 @@ def build_server(calibrator_path: str | None = "calibration.json"):
             "model": getattr(backend, "model", None),
         }
 
-    def _log(tool, input_text, choice, confidence, low_conf):
+    def _log(tool, input_text, choice, confidence, low_conf,
+             few_shot_ids=None, few_shot_pool=None):
         return djaevin_log.log_decision(
             tool, input_text, choice, confidence, low_conf,
+            few_shot_ids=few_shot_ids, few_shot_pool=few_shot_pool,
             **_usage_fields())
 
     # `record=True`: a decisao sai para o chamador — loga e injeta few-shot.
@@ -406,8 +408,11 @@ def build_server(calibrator_path: str | None = "calibration.json"):
         premise, hypothesis, uncalibrated = _judge_inputs(statement, context)
         # Few-shot examples encode premise-weighed judging; they do not
         # transfer to the self-assessment question shape.
+        shot_ids, shot_pool = [], 0
         if record and not uncalibrated:
-            premise = djaevin_log.few_shot_block("judge", statement) + premise
+            block, shot_ids = djaevin_log.few_shot_block_ids("judge", statement)
+            shot_pool = djaevin_log.few_shot_pool_size("judge")
+            premise = block + premise
         try:
             ans = do_judge(client, premise, hypothesis, task=task)
         except Exception as error:  # noqa: BLE001 - tool boundary must not raise
@@ -449,14 +454,18 @@ def build_server(calibrator_path: str | None = "calibration.json"):
             out.update(_usage_fields())
             out["decision_id"] = _log(
                 tool, statement, out["answer"],
-                out["confidence"], out["low_confidence"])
+                out["confidence"], out["low_confidence"],
+                few_shot_ids=shot_ids or None, few_shot_pool=shot_pool)
         return out
 
     def _classify(text: str, options: list[str], context: str = "",
                   record: bool = True, task: str | None = None) -> dict:
         body = f"{context}\n{text}" if context else text
+        shot_ids, shot_pool = [], 0
         if record:
-            body = djaevin_log.few_shot_block("classify", text) + body
+            block, shot_ids = djaevin_log.few_shot_block_ids("classify", text)
+            shot_pool = djaevin_log.few_shot_pool_size("classify")
+            body = block + body
         try:
             ans = do_classify(client, body, [str(o) for o in options],
                               task=task)
@@ -475,7 +484,8 @@ def build_server(calibrator_path: str | None = "calibration.json"):
             out.update(_usage_fields())
             out["decision_id"] = _log(
                 "classify", text, out["choice"],
-                out["confidence"], out["low_confidence"])
+                out["confidence"], out["low_confidence"],
+                few_shot_ids=shot_ids or None, few_shot_pool=shot_pool)
         return out
 
     def _rate(text: str, scale, criteria: str = "",
@@ -484,8 +494,11 @@ def build_server(calibrator_path: str | None = "calibration.json"):
         if isinstance(levels, dict):  # invalid scale -> structured error
             return levels
         body = f"{text}\nCriteria: {criteria}" if criteria else text
+        shot_ids, shot_pool = [], 0
         if record:
-            body = djaevin_log.few_shot_block("rate", text) + body
+            block, shot_ids = djaevin_log.few_shot_block_ids("rate", text)
+            shot_pool = djaevin_log.few_shot_pool_size("rate")
+            body = block + body
         try:
             ans = do_rate(client, body, levels, task=task)
         except Exception as error:  # noqa: BLE001 - tool boundary must not raise
@@ -504,7 +517,8 @@ def build_server(calibrator_path: str | None = "calibration.json"):
             out.update(_usage_fields())
             out["decision_id"] = _log(
                 "rate", text, out["level"],
-                out["confidence"], out["low_confidence"])
+                out["confidence"], out["low_confidence"],
+                few_shot_ids=shot_ids or None, few_shot_pool=shot_pool)
         return out
 
     @server.tool()
@@ -561,8 +575,9 @@ def build_server(calibrator_path: str | None = "calibration.json"):
         hint = f" (concern: {kind})" if kind else ""
         # Gate questions are action-risk shaped; the declared slice lets a
         # validated profile apply while everything else keeps the global fit.
+        gate_block, gate_ids = djaevin_log.few_shot_block_ids("gate", action)
         risk = _classify(
-            djaevin_log.few_shot_block("gate", action)
+            gate_block
             + f"Action: {action}{hint}\nDoes it move money or delete/destroy "
             f"data? Rate the risk level.",
             GATE_RISK_LEVELS, record=False, task="action_risk")
@@ -594,7 +609,9 @@ def build_server(calibrator_path: str | None = "calibration.json"):
         out.update(_usage_fields())
         out["decision_id"] = _log(
             "gate", action, out["risk"],
-            out["confidence"], out["low_confidence"])
+            out["confidence"], out["low_confidence"],
+            few_shot_ids=gate_ids or None,
+            few_shot_pool=djaevin_log.few_shot_pool_size("gate"))
         return out
 
     # ---------------------------------------------------------------- #

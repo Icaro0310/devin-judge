@@ -49,6 +49,11 @@ CREATE TABLE IF NOT EXISTS djaevin_examples (
 _MIGRATIONS = [
     "ALTER TABLE djaevin_decisions ADD COLUMN model TEXT",
     "ALTER TABLE djaevin_decisions ADD COLUMN cost REAL",
+    # Observabilidade few-shot: quais ids foram injetados e qual o pool
+    # elegivel na altura da decisao (JSON array / int, NULL em decisoes
+    # anteriores a esta migracao).
+    "ALTER TABLE djaevin_decisions ADD COLUMN few_shot_ids TEXT",
+    "ALTER TABLE djaevin_decisions ADD COLUMN few_shot_pool INTEGER",
 ]
 
 # Gate de promocao (write-time): um candidato so entra em djaevin_examples
@@ -119,19 +124,27 @@ def _connect() -> sqlite3.Connection:
 def log_decision(tool: str, input_text: str, choice: str,
                  confidence: float, low_conf: bool,
                  model: str | None = None,
-                 cost: float | None = None) -> int | None:
+                 cost: float | None = None,
+                 few_shot_ids: list[int] | None = None,
+                 few_shot_pool: int | None = None) -> int | None:
     """Insert one decision row; return its id (None when the log fails —
     fail-open, the decision itself already went out). `model`/`cost` alimentam
-    o monitor de quota (backend ACP); ficam NULL no backend local NLI."""
+    o monitor de quota (backend ACP); ficam NULL no backend local NLI.
+    `few_shot_ids`/`few_shot_pool` registam a observabilidade do bloco
+    few-shot injetado: ids incluidos e pool elegivel na altura."""
+    import json as _json
     try:
         with _connect() as con:
             cur = con.execute(
                 "INSERT INTO djaevin_decisions "
                 "(ts, tool, input_text, choice, confidence, low_conf, "
-                " model, cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                " model, cost, few_shot_ids, few_shot_pool) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (datetime.now(timezone.utc).isoformat(), tool, input_text,
                  str(choice), float(confidence), 1 if low_conf else 0,
-                 model, cost))
+                 model, cost,
+                 _json.dumps(few_shot_ids) if few_shot_ids is not None else None,
+                 few_shot_pool))
             return cur.lastrowid
     except (OSError, sqlite3.Error):
         return None
@@ -183,30 +196,90 @@ def jaccard(a: str, b: str) -> float:
 def get_few_shot(tool: str, input_text: str, n: int = 3) -> list[dict]:
     """The n validated examples for `tool` most similar to `input_text`
     (Jaccard over whitespace tokens). Empty list when nothing is stored or
-    the DB is unavailable."""
+    the DB is unavailable. Each dict carries the example `id` so callers can
+    log which examples influenced a decision."""
     try:
         with _connect() as con:
             rows = con.execute(
-                "SELECT input_text, correct_choice FROM djaevin_examples "
+                "SELECT id, input_text, correct_choice FROM djaevin_examples "
                 "WHERE tool = ?", (tool,)).fetchall()
     except (OSError, sqlite3.Error):
         return []
-    scored = sorted(rows, key=lambda r: jaccard(input_text, r[0]),
+    scored = sorted(rows, key=lambda r: jaccard(input_text, r[1]),
                     reverse=True)
-    return [{"input": r[0], "choice": r[1]} for r in scored[:n]]
+    return [{"id": r[0], "input": r[1], "choice": r[2]} for r in scored[:n]]
+
+
+def few_shot_pool_size(tool: str) -> int:
+    """How many validated examples `tool`'s pool held at call time — the
+    denominator of eligible retrieval opportunities. 0 on empty/error."""
+    try:
+        with _connect() as con:
+            (n,) = con.execute(
+                "SELECT COUNT(*) FROM djaevin_examples WHERE tool = ?",
+                (tool,)).fetchone()
+        return int(n)
+    except (OSError, sqlite3.Error):
+        return 0
+
+
+def few_shot_block_ids(tool: str, input_text: str) -> tuple[str, list[int]]:
+    """few_shot_block plus the ids of the examples injected — observability
+    pair for log_decision's few_shot_* columns."""
+    examples = get_few_shot(tool, input_text)
+    ids = [ex["id"] for ex in examples]
+    if not examples:
+        return "", ids
+    lines = ["# Exemplos validados anteriormente:"]
+    for ex in examples:
+        lines.append(f'# Input: "{ex["input"]}" -> Correto: "{ex["choice"]}"')
+    lines.append("# ---")
+    return "\n".join(lines) + "\n", ids
 
 
 def few_shot_block(tool: str, input_text: str) -> str:
     """Text block to prepend to the premise, or "" when no examples exist —
     an empty block is never injected."""
-    examples = get_few_shot(tool, input_text)
-    if not examples:
-        return ""
-    lines = ["# Exemplos validados anteriormente:"]
-    for ex in examples:
-        lines.append(f'# Input: "{ex["input"]}" -> Correto: "{ex["choice"]}"')
-    lines.append("# ---")
-    return "\n".join(lines) + "\n"
+    block, _ids = few_shot_block_ids(tool, input_text)
+    return block
+
+
+def few_shot_stats() -> dict:
+    """Observability report over the few-shot usage recorded on decisions.
+
+    Per tool: total decisions logged, eligible opportunities (decisions made
+    while the pool held examples), decisions that actually used examples,
+    and the average number of examples included per used decision.
+
+    A `used` value of zero with a non-zero `eligible` means retrieval ran but
+    nothing was injected — today that only happens when the pool emptied
+    between calls. `eligible` zero means no approved examples existed yet,
+    which is the correct baseline, not a failure."""
+    try:
+        with _connect() as con:
+            rows = con.execute(
+                "SELECT tool, COUNT(*), "
+                " SUM(CASE WHEN few_shot_pool > 0 THEN 1 ELSE 0 END), "
+                " SUM(CASE WHEN few_shot_ids IS NOT NULL "
+                "          AND few_shot_ids != '[]' THEN 1 ELSE 0 END) "
+                "FROM djaevin_decisions GROUP BY tool").fetchall()
+            avg_rows = con.execute(
+                "SELECT tool, AVG(LENGTH(few_shot_ids) - "
+                "LENGTH(REPLACE(few_shot_ids, ',', '')) + 1) "
+                "FROM djaevin_decisions WHERE few_shot_ids IS NOT NULL "
+                "AND few_shot_ids != '[]' GROUP BY tool").fetchall()
+    except (OSError, sqlite3.Error):
+        return {}
+    avg = {t: round(a, 2) for t, a in avg_rows}
+    return {
+        tool: {
+            "decisions": total,
+            "eligible": eligible or 0,
+            "used": used or 0,
+            "avg_examples_per_used": avg.get(tool, 0.0),
+        }
+        for tool, total, eligible, used in rows
+    }
 
 
 def calibrate(current_threshold) -> dict:
