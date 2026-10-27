@@ -59,6 +59,49 @@ def test_gate_no_action_is_usage_error(capsys):
     assert main(["gate"]) == 2
 
 
+def test_gate_checks_file_passes_custom_checks(tmp_path, monkeypatch, capsys):
+    checks_file = tmp_path / "checks.json"
+    checks_file.write_text(json.dumps({
+        "protected_main": "This action merges into protected main."}))
+    seen = {}
+
+    def fake(client, action, checks=None):
+        seen["checks"] = checks
+        return {"block": False, "verdict": "allow", "triggered": {}}
+    monkeypatch.setattr(mcp_srv, "do_gate", fake)
+    assert main(["gate", "--action", "merge it",
+                 "--checks-file", str(checks_file)]) == 0
+    assert seen["checks"] == {
+        "protected_main": "This action merges into protected main."}
+
+
+def test_gate_checks_file_bad_shape_is_usage_error(tmp_path, capsys):
+    bad = tmp_path / "checks.json"
+    bad.write_text(json.dumps(["not", "an", "object"]))
+    assert main(["gate", "--action", "x", "--checks-file", str(bad)]) == 2
+
+
+def test_gate_checks_preset_merge_passes_preset(monkeypatch, capsys):
+    seen = {}
+
+    def fake(client, action, checks=None):
+        seen["checks"] = checks
+        return {"block": True,
+                "verdict": "block, require explicit confirmation",
+                "triggered": {"protected_main": 0.9}}
+    monkeypatch.setattr(mcp_srv, "do_gate", fake)
+    assert main(["gate", "--action", "merge the PR",
+                 "--checks-preset", "merge"]) == 1
+    assert set(seen["checks"]) == {
+        "protected_main", "runtime_destructive",
+        "degraded_coverage", "sensitive_surface"}
+
+
+def test_gate_checks_preset_unknown_is_usage_error(capsys):
+    assert main(["gate", "--action", "x",
+                 "--checks-preset", "nonexistent"]) == 2
+
+
 def test_gate_action_file(tmp_path, monkeypatch, capsys):
     f = tmp_path / "action.txt"
     f.write_text("drop the table")
