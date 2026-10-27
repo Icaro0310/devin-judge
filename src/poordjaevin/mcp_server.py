@@ -59,6 +59,28 @@ DEFAULT_GATE_CHECKS = {
     "deletes_data": "This action deletes or destroys data.",
 }
 
+# Preset for gating code-review/merge actions in CI. Concrete hypotheses,
+# per the repo convention: the NLI model scores "this merges into a
+# protected branch" reliably and "this is dangerous" poorly. A generic
+# merge description can match several of these at once, so any triggered
+# check blocks — same fail-closed rule as the default pair.
+MERGE_GATE_CHECKS = {
+    "protected_main": "This action merges code into the protected main "
+                      "branch of a repository.",
+    "runtime_destructive": "The code being merged can delete files, "
+                           "terminate processes, or destroy resources "
+                           "when it runs.",
+    "degraded_coverage": "This merge proceeds while review coverage is "
+                         "incomplete or degraded.",
+    "sensitive_surface": "The change modifies credentials, secrets, "
+                         "billing, or CI workflow files.",
+}
+
+GATE_CHECK_PRESETS = {
+    "default": DEFAULT_GATE_CHECKS,
+    "merge": MERGE_GATE_CHECKS,
+}
+
 
 ABSTAIN = "ABSTAIN"
 

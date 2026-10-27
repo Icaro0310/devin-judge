@@ -209,7 +209,7 @@ def cmd_ask(args) -> int:
 def cmd_gate(args) -> int:
     import json
 
-    from .mcp_server import build_client, do_gate
+    from .mcp_server import GATE_CHECK_PRESETS, build_client, do_gate
 
     if args.action_file:
         try:
@@ -224,8 +224,31 @@ def cmd_gate(args) -> int:
         print("provide --action or --action-file", file=sys.stderr)
         return 2
 
+    checks = None
+    if args.checks_file:
+        try:
+            with open(args.checks_file) as f:
+                checks = json.load(f)
+        except (OSError, json.JSONDecodeError) as exc:
+            print(json.dumps({"error": "io", "detail": str(exc)}))
+            return 2
+        if not isinstance(checks, dict) or not all(
+                isinstance(v, str) for v in checks.values()):
+            print(json.dumps({"error": "usage",
+                              "detail": "checks file must be a JSON object "
+                                        "{name: hypothesis_statement}"}))
+            return 2
+    elif args.checks_preset:
+        checks = GATE_CHECK_PRESETS.get(args.checks_preset)
+        if checks is None:
+            print(json.dumps({"error": "usage",
+                              "detail": f"unknown preset "
+                                        f"{args.checks_preset!r}; expected one of "
+                                        f"{sorted(GATE_CHECK_PRESETS)}"}))
+            return 2
+
     try:
-        out = do_gate(build_client(args.calibrator), action)
+        out = do_gate(build_client(args.calibrator), action, checks)
     except Exception as exc:  # noqa: BLE001 — a gate must fail closed
         print(json.dumps({"error": "backend", "detail": str(exc),
                           "verdict": "block, require explicit confirmation"}))
@@ -291,6 +314,13 @@ def main(argv=None) -> int:
                     help="read the action text from a file")
     pg.add_argument("--calibrator", default="calibration.json",
                     help="calibration.json to apply (fitted temperature)")
+    pg.add_argument("--checks-file",
+                    help="JSON file {name: hypothesis} overriding the "
+                    "default risk checks (concrete statements score "
+                    "better than abstract ones)")
+    pg.add_argument("--checks-preset", default="",
+                    help="named check set from GATE_CHECK_PRESETS "
+                    "(e.g. 'merge' for PR-merge gating)")
     pg.set_defaults(func=cmd_gate)
 
     args = p.parse_args(argv)
