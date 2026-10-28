@@ -34,6 +34,7 @@ test = ["pytest>=8.0", "mcp>=1.2"]
 
 [project.scripts]
 poordjaevin = "poordjaevin.cli:main"
+devin-judge = "poordjaevin.cli:main"
 
 [project.urls]
 Source = "https://github.com/Icaro0310/devin-judge"
