@@ -83,6 +83,11 @@ plan to use the Devin ACP backend (`poordjaevin serve` default), a plain
 straight from GitHub, append `@ git+https://github.com/Icaro0310/devin-judge.git`
 to the package spec.
 
+`devin-judge` is the new PyPI distribution name: `pip install devin-judge`
+and `pip install poordjaevin` install the same tool. The binary remains
+`poordjaevin` for historical compatibility, and a `devin-judge` command is
+provided as well.
+
 ```python
 from poordjaevin import Client, Choice, Score, Noul
 

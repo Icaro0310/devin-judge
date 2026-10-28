@@ -1,0 +1,40 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "devin-judge"
+version = "0.1.0"
+description = "Meta-package for the devin-judge tool; installs poordjaevin and exposes both devin-judge and poordjaevin commands"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Icaro0310" }]
+keywords = ["llm", "classification", "calibration", "system-one", "structured-output", "conformal-prediction", "zero-shot", "guardrails", "mcp"]
+dependencies = ["poordjaevin>=0.1.3"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.scripts]
+devin-judge = "devin_judge_shim:_main"
+poordjaevin = "devin_judge_shim:_main"
+
+[project.urls]
+Source = "https://github.com/Icaro0310/devin-judge"
+Homepage = "https://github.com/Icaro0310/devin-judge"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/devin_judge_shim"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
