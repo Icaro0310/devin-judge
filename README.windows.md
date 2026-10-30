@@ -13,7 +13,7 @@ Personal Windows uses the extended runtime: local execution plus optional Devin 
 Install the isolated Python CLI:
 
 ```powershell
-uv tool install "poordjaevin[local,mcp]"
+uv tool install "devin-judge[local,mcp]"
 ```
 
 ## Devin paths

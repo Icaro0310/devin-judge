@@ -13,7 +13,7 @@ Linux uses the extended runtime: local execution plus optional Devin VM/QwenPaw 
 Install the isolated Python CLI:
 
 ```bash
-uv tool install 'poordjaevin[local,mcp]'
+uv tool install 'devin-judge[local,mcp]'
 ```
 
 ## Devin paths

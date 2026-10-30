@@ -13,7 +13,7 @@ Corporate Windows is a local-only environment: no Devin VM, QwenPaw, Slack depen
 Install the isolated Python CLI:
 
 ```powershell
-uv tool install "poordjaevin[local,mcp]"
+uv tool install "devin-judge[local,mcp]"
 ```
 
 ## Devin paths
@@ -36,8 +36,9 @@ Use `--data-dir`/`--config-dir` where the tool documents them for non-default lo
 - **Blocked installers:** if winget/Store are disabled by policy, `uv` installs as a standalone binary, download the GitHub release zip, extract to `%LOCALAPPDATA%\bin`, add it to PATH.
 - **Long paths:** keep checkout/install roots short (`C:\dev`), MAX_PATH (260 chars) can still bite inside virtualenvs; `LongPathsEnabled` needs admin, short roots do not.
 - **EDR/antivirus:** if a scan kills the install, retry with an exclusion or ask IT to allowlist `%LOCALAPPDATA%\uv` and `%USERPROFILE%\.local\bin`. These tools never elevate or listen on the network by default.
-- **Offline/air-gapped:** `pip download <package> -d wheels\` on a connected machine, copy the folder, then `pip install --no-index --find-links wheels\` on the target (pure-Python tools; native deps need a matching platform wheel). For `source_only` tools installed from a copied checkout, stage the build backend too (`pip download setuptools wheel`), then install with `pip install --no-index --find-links wheels\ --no-build-isolation .` inside the checkout.
+- **Offline/air-gapped:** `pip download <package> -d wheels\` on a connected machine, copy the folder, then `pip install --no-index --find-links wheels\` on the target (pure-Python tools; native deps need a matching platform wheel). For `source_only` tools installed from a copied checkout, stage the build backend too (`pip download setuptools wheel -d wheels\`, into the folder being copied) and install it first (`pip install --no-index --find-links wheels\ setuptools wheel`; `--no-build-isolation` needs the backend installed, not only staged), then install with `pip install --no-index --find-links wheels\ --no-build-isolation .` inside the checkout.
 - **Fully local runtime:** set `POORDJAEVIN_BACKEND=nli` for local-only use: the default `serve`/`gate` backend (`acp`) drives a Devin cloud session. The `nli` backend downloads a ~400 MB model from Hugging Face on first use. Pre-seed with `HF_HOME` + `HF_HUB_OFFLINE=1`, or use the pre-baked container image.
+- **VS Code without Devin:** where Copilot (or another approved chat model) is available but the Devin CLI is not, `POORDJAEVIN_BACKEND=vscode-lm` scores through the `icaro0310.judge` extension instead. The extension serves a loopback-only endpoint (`127.0.0.1`, random port, bearer token in the endpoint file under `%LOCALAPPDATA%\poordjaevin`); scoring text goes to the chat model's provider, not to Devin. If your EDR flags localhost listeners, this backend is opt-in and `nli` keeps working without it.
 
 ## Zscaler
 
