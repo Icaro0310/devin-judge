@@ -249,8 +249,9 @@ async function scorePairs(pairs) {
   ].join("\n\n");
   const turn = { text: "", model: currentModel, notifications: [] };
   activeTurn = turn;
+  let res = null;
   try {
-    await rpc("session/prompt", {
+    res = await rpc("session/prompt", {
       sessionId,
       prompt: [{ type: "text", text: prompt }],
     });
@@ -261,7 +262,9 @@ async function scorePairs(pairs) {
   return {
     probs,
     model: turn.model || currentModel || null,
-    cost: costFromNotifications(turn.notifications),
+    // res.usage carries the cost fields on free-model turns (same source
+    // devin-acp.js scans); without it cost read null -> fail-closed.
+    cost: costFromNotifications([...turn.notifications, res]),
   };
 }
 
