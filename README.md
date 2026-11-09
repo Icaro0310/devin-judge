@@ -29,7 +29,7 @@
 
 - **Job:** Control
 - **Product:** [`devin-judge`](https://github.com/Icaro0310/devin-judge)
-- **Packages:** `poordjaevin`
+- **Packages:** `devin-judge`
 - **Mode:** read-only
 - **Ecosystem:** [`awesome-devin`](https://github.com/Icaro0310/awesome-devin) · registry: [`devin-powerups`](https://github.com/Icaro0310/devin-powerups)
 <!-- DEVIN-WHERE:END -->
