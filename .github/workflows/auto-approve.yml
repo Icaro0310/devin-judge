@@ -29,6 +29,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  statuses: read
 
 jobs:
   approve:
@@ -42,4 +43,5 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-    uses: Icaro0310/devin-powerups/.github/workflows/pr-approve.yml@v1.14
+      statuses: read
+    uses: Icaro0310/devin-powerups/.github/workflows/pr-approve.yml@v1.15
