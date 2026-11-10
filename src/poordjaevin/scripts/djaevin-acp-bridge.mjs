@@ -33,7 +33,7 @@ const DEVIN_DB = process.env.POORDJAEVIN_DEVIN_DB ||
 // proof; "janitor-pending" would not). Callers with real content pass a
 // different tag via POORDJAEVIN_ACP_MANAGED_TAG.
 const MANAGED_TAG = process.env.POORDJAEVIN_ACP_MANAGED_TAG || "djaevin-acp";
-async function hideManagedSession() {
+async function hideManagedSession(sid = sessionId) {
   // The session row may not be committed yet when session/new returns —
   // UPDATE on 0 rows was silent and the session stayed visible forever.
   // Poll until the row exists (or deadline); fail-open.
@@ -45,16 +45,18 @@ async function hideManagedSession() {
         // Robot_ = "dispensable content, delete without export" — only the
         // djaevin-acp tag (pure scoring) qualifies. djaevin-draft /
         // janitor-pending hold real text and require export, so they do NOT
-        // get Robot_.
+        // get Robot_. GLOB (not LIKE): '_' is literal in GLOB, so a title
+        // like 'RobotXfoo' does not satisfy the 'Robot_*' prefix check and
+        // still gets branded.
         const robotTitle = MANAGED_TAG === "djaevin-acp"
-          ? "title = CASE WHEN COALESCE(title,'') LIKE 'Robot_%' THEN title " +
+          ? "title = CASE WHEN COALESCE(title,'') GLOB 'Robot_*' THEN title " +
             "ELSE 'Robot_' || COALESCE(NULLIF(title,''),'untitled') END, "
           : "";
         const res = db.prepare(
           "UPDATE sessions SET hidden = 1, " + robotTitle +
           "metadata = json_set(" +
           "COALESCE(metadata, '{}'), '$.janitor_managed', ?) " +
-          "WHERE id = ?").run(MANAGED_TAG, sessionId);
+          "WHERE id = ?").run(MANAGED_TAG, sid);
         if (res.changes > 0) return true;
       } finally {
         db.close();
@@ -68,13 +70,17 @@ async function hideManagedSession() {
 // The ACP session row is only materialized in sessions.db when `devin acp`
 // processes the first prompt — calling hideManagedSession inside
 // ensureSession polls a nonexistent row and the session stays visible.
-// Fire the hide lazily after the first turn (idempotent).
-let hideDone = false, hidePromise = null;
+// Fire the hide lazily after the first turn (idempotent). Tracked per
+// sessionId: the bridge stays alive across requests and sessionId can be
+// recreated after a timeout/exit, so a boolean hideDone would leave a
+// recreated session visible and unbranded.
+let hiddenSessionId = null, hidePromise = null;
 function maybeHideManaged() {
-  if (hideDone) return Promise.resolve();
+  const sid = sessionId;
+  if (!sid || hiddenSessionId === sid) return Promise.resolve();
   if (!hidePromise) {
-    hidePromise = hideManagedSession()
-      .then((ok) => { hideDone = ok; if (!ok) hidePromise = null; })
+    hidePromise = hideManagedSession(sid)
+      .then((ok) => { if (ok) hiddenSessionId = sid; if (!ok) hidePromise = null; })
       .catch(() => { hidePromise = null; });
   }
   return hidePromise;
