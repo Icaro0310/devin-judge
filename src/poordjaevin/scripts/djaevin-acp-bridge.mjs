@@ -80,8 +80,9 @@ function maybeHideManaged() {
   if (!sid || hiddenSessionId === sid) return Promise.resolve();
   if (!hidePromise) {
     hidePromise = hideManagedSession(sid)
-      .then((ok) => { if (ok) hiddenSessionId = sid; if (!ok) hidePromise = null; })
-      .catch(() => { hidePromise = null; });
+      .then((ok) => { if (ok) hiddenSessionId = sid; })
+      .catch(() => {})
+      .finally(() => { hidePromise = null; });
   }
   return hidePromise;
 }
