@@ -15,6 +15,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   request-shaped complaints) marked `# ambiguous:` in `source.py` with the
   judgment call made.
 
+### Fixed
+
+- The ACP bridge now marks each `serve` scoring session `hidden` +
+  `janitor_managed` in Devin's `sessions.db` — but *after* the first
+  prompt, not at `session/new`. The row is only materialized when
+  `devin acp` processes the first turn, so hiding at creation polled a
+  nonexistent row and every judge call stayed visible in the Devin
+  sidebar forever. Pure-scoring sessions (default `djaevin-acp` tag) are
+  also retitled `Robot_*` so the janitor purges them without export.
+
 ### Changed
 
 - Headline numbers re-measured on the grown set: accuracy 0.793, ECE

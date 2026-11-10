@@ -161,6 +161,8 @@ Backend selection and tuning, all optional:
 | `POORDJAEVIN_ACP_MODEL` | auto | pin a specific Devin model instead of automatic rotation |
 | `POORDJAEVIN_ACP_TIMEOUT` | `120` | seconds per decision round trip |
 | `POORDJAEVIN_ACP_MAX_COST` | unset | fail closed when cumulative ACP cost exceeds this budget |
+| `POORDJAEVIN_ACP_MANAGED_TAG` | `djaevin-acp` | janitor tag stamped on the ACP session's metadata so the session-janitor can recognize (and purge) it; `djaevin-acp` also retitles it `Robot_*`. Pass another tag for callers whose transcript holds real content |
+| `POORDJAEVIN_DEVIN_DB` | auto | path to Devin's `sessions.db` (default: platform data dir) |
 | `POORDJAEVIN_VSCODE_LM_ENDPOINT` | auto | endpoint file path or direct `http(s)://` URL override |
 | `POORDJAEVIN_VSCODE_LM_TIMEOUT` | `120` | seconds per request to the extension endpoint |
 | `POORDJAEVIN_VSCODE_LM_FALLBACK` | unset | `nli` = fall back to the local model when the extension is unavailable |
@@ -331,7 +333,7 @@ state + typed questions
 ```
 
 - **Local NLI backend (fully offline):** one small natural-language-inference model scores every option as an entailment hypothesis, in a single batched forward pass. Fully offline after a one-time ~400MB download. No key, no vendor, your text never leaves your machine. This is the backend used by `poordjaevin eval` / `calibrate` and by `Client()` in Python; select it for `serve` with `POORDJAEVIN_BACKEND=nli`.
-- **Devin ACP backend (default for `poordjaevin serve`):** routes scoring through `devin acp`, so decisions use the model your Devin plan already provides, with automatic rotation and per-call cost reporting. No extra model, no extra key.
+- **Devin ACP backend (default for `poordjaevin serve`):** routes scoring through `devin acp`, so decisions use the model your Devin plan already provides, with automatic rotation and per-call cost reporting. No extra model, no extra key. Each `serve` scoring session is marked `hidden` + `janitor_managed` in Devin's `sessions.db` after its first turn (and retitled `Robot_*` under the default `djaevin-acp` tag), so judge calls never clutter the sidebar and the session-janitor can purge them without export.
 - **VS Code LM backend:** routes scoring through `vscode.lm` inside the `icaro0310.judge` extension, so decisions use whichever chat model VS Code is already serving (Copilot, Codex, BYOK), with no extra key. Select it with `POORDJAEVIN_BACKEND=vscode-lm`.
 - **Calibration (the moat):** temperature scaling fits one scalar so predicted confidence matches real accuracy; conformal thresholding turns a target risk budget into an "I don't know, escalate" signal. Calibration is backend-specific: a calibrator fitted on the NLI backend is not applied to ACP scores (the server warns and falls back to raw confidence on a mismatch).
 
