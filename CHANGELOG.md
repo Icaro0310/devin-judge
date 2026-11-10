@@ -24,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `poordjaevin eval` / `calibrate --plots`. The `crossbench/` table keeps
   its 55-item / 160-decision numbers with an explicit snapshot note — a
   four-system re-run on the grown set has not been done.
+- CI: `auto-approve` caller repinned to `pr-approve` `@v1.16` — the
+  auto-merge arm moved into a dedicated `arm-auto-merge` job inside
+  the reusable so the approve path runs read-only again;
+  `contents: write` stays on the caller for the arm.
 
 ## [0.1.3] - 2026-10-16
 
