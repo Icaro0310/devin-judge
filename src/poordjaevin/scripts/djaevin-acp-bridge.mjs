@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import readline from "node:readline";
 import { spawn } from "node:child_process";
+import { DatabaseSync } from "node:sqlite";
 
 const timeoutMs = Number(process.env.POORDJAEVIN_ACP_TIMEOUT || 120) * 1000;
 const modelPreference = process.env.POORDJAEVIN_ACP_MODEL || "";
@@ -15,6 +16,69 @@ let currentModel = null;
 let configOptions = [];
 let activeTurn = null;
 let parentQueue = Promise.resolve();
+
+const DEVIN_DB = process.env.POORDJAEVIN_DEVIN_DB ||
+  path.join(
+    process.env.APPDATA ||
+      (process.platform === "darwin"
+        ? path.join(os.homedir(), "Library", "Application Support")
+        : process.env.XDG_DATA_HOME ||
+          path.join(os.homedir(), ".local", "share")),
+    "devin", "cli", "sessions.db");
+
+// This session is a pure scoring backend — its content is arrays of
+// integers, nothing recoverable. Mark it hidden + janitor_managed at birth
+// so it never appears in the sidebar and the session-janitor deletes it
+// without export once it ages out (the "djaevin-acp" tag waives the export
+// proof; "janitor-pending" would not). Callers with real content pass a
+// different tag via POORDJAEVIN_ACP_MANAGED_TAG.
+const MANAGED_TAG = process.env.POORDJAEVIN_ACP_MANAGED_TAG || "djaevin-acp";
+async function hideManagedSession() {
+  // The session row may not be committed yet when session/new returns —
+  // UPDATE on 0 rows was silent and the session stayed visible forever.
+  // Poll until the row exists (or deadline); fail-open.
+  const deadline = Date.now() + 15000;
+  while (Date.now() < deadline) {
+    try {
+      const db = new DatabaseSync(DEVIN_DB);
+      try {
+        // Robot_ = "dispensable content, delete without export" — only the
+        // djaevin-acp tag (pure scoring) qualifies. djaevin-draft /
+        // janitor-pending hold real text and require export, so they do NOT
+        // get Robot_.
+        const robotTitle = MANAGED_TAG === "djaevin-acp"
+          ? "title = CASE WHEN COALESCE(title,'') LIKE 'Robot_%' THEN title " +
+            "ELSE 'Robot_' || COALESCE(NULLIF(title,''),'untitled') END, "
+          : "";
+        const res = db.prepare(
+          "UPDATE sessions SET hidden = 1, " + robotTitle +
+          "metadata = json_set(" +
+          "COALESCE(metadata, '{}'), '$.janitor_managed', ?) " +
+          "WHERE id = ?").run(MANAGED_TAG, sessionId);
+        if (res.changes > 0) return true;
+      } finally {
+        db.close();
+      }
+    } catch { /* row not committed yet or DB locked — retry */ }
+    await new Promise((r) => setTimeout(r, 400));
+  }
+  return false;
+}
+
+// The ACP session row is only materialized in sessions.db when `devin acp`
+// processes the first prompt — calling hideManagedSession inside
+// ensureSession polls a nonexistent row and the session stays visible.
+// Fire the hide lazily after the first turn (idempotent).
+let hideDone = false, hidePromise = null;
+function maybeHideManaged() {
+  if (hideDone) return Promise.resolve();
+  if (!hidePromise) {
+    hidePromise = hideManagedSession()
+      .then((ok) => { hideDone = ok; if (!ok) hidePromise = null; })
+      .catch(() => { hidePromise = null; });
+  }
+  return hidePromise;
+}
 
 class BridgeError extends Error {}
 
@@ -258,6 +322,12 @@ async function scorePairs(pairs) {
   } finally {
     activeTurn = null;
   }
+  // Fire-and-forget: the bridge stays alive across requests (parentQueue),
+  // so the hide completes in the background. Awaiting it would stall a
+  // scorePairs turn for up to the poll deadline whenever the session row
+  // never materializes (e.g. a fake `devin` CLI that writes no sessions.db
+  // row). Escapes are still caught by the janitor's managed/Robot_ sweep.
+  void maybeHideManaged();
   const probs = parseScores(turn.text, pairs.length);
   return {
     probs,
